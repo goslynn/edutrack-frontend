@@ -1,1 +1,83 @@
 @import "tailwindcss";
+
+/* ============================================================
+ * EduTrack — Theme tokens (light, default)
+ * ============================================================
+ *
+ * REGLA DURA DE COLOR
+ * -------------------
+ * Toda la UI DEBE colorearse exclusivamente con los tokens semánticos
+ * declarados aquí (vía utilidades Tailwind generadas a partir de @theme).
+ *
+ * PROHIBIDO en componentes/páginas:
+ *   - Utilidades de color crudas de Tailwind: `bg-slate-800`, `text-indigo-400`,
+ *     `border-zinc-200`, `from-slate-900`, etc.
+ *   - Valores arbitrarios: `bg-[#021a2c]`, `text-[rgb(...)]`.
+ *   - Variables CSS de la paleta de marca directamente (`var(--color-brand-teal)`)
+ *     fuera de este archivo; siempre se consume el token semántico.
+ *
+ * PERMITIDO:
+ *   - Tokens semánticos:
+ *       bg-background / text-foreground / text-muted
+ *       bg-surface / border-border
+ *       bg-primary / text-primary-foreground (idem secondary, accent)
+ *       bg-success / bg-warning / bg-danger / bg-info (y su *-foreground)
+ *   - Estados visuales puros (opacidad, blur, sombra) que no inyectan color
+ *     literal: `opacity-50`, `shadow-lg`, `backdrop-blur`.
+ *
+ * POR QUÉ
+ *   - Un único punto de cambio para rediseños y futuros temas (dark, alto contraste).
+ *   - Coherencia entre microservicios/páginas: "primario" es una sola cosa.
+ *   - Accesibilidad: los pares <token> / <token>-foreground están validados juntos.
+ *
+ * CÓMO AGREGAR UN COLOR
+ *   1. Si es de marca, agregar `--color-brand-*` (paleta cruda).
+ *   2. Mapearlo a un token semántico (`--color-<rol>`) abajo.
+ *   3. Si introduce texto sobre fondo, declarar su par `*-foreground`.
+ *   4. Nunca exponer la variable cruda a los componentes.
+ * ============================================================ */
+
+@theme {
+  /* --- Paleta de marca (cruda, no usar directo en componentes) --- */
+  --color-brand-sky: #8ecae6;
+  --color-brand-teal: #219ebc;
+  --color-brand-deep: #023047;
+  --color-brand-amber: #ffb703;
+  --color-brand-orange: #fb8500;
+
+  /* --- Superficies y texto --- */
+  --color-background: #ffffff;
+  --color-surface: #f4f9fb;
+  --color-foreground: #023047;
+  --color-muted: #5b7a8a;
+  --color-border: #d8e6ec;
+
+  /* --- Roles de marca --- */
+  --color-primary: #219ebc;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #8ecae6;
+  --color-secondary-foreground: #023047;
+
+  --color-accent: #fb8500;
+  --color-accent-foreground: #ffffff;
+
+  /* --- Estados semánticos --- */
+  --color-success: #2f9e44;
+  --color-success-foreground: #ffffff;
+
+  --color-warning: #ffb703;
+  --color-warning-foreground: #023047;
+
+  --color-danger: #c92a2a;
+  --color-danger-foreground: #ffffff;
+
+  --color-info: #219ebc;
+  --color-info-foreground: #ffffff;
+}
+
+html,
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}

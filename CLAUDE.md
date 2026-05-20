@@ -59,6 +59,18 @@ Priorizar componetización agresiva siguiendo el estándar React + TS:
 - Mientras más básico el componente, más se acerca a un wrapper estilizado del elemento HTML; mientras más alto, más props de dominio expone.
 - Los componentes visuales son **stateless** o solo manejan estado puramente visual (open/closed, focus). El estado de dominio vive arriba.
 
+### Color: tokens semánticos (regla dura)
+
+Toda la UI se colorea **exclusivamente** con los tokens semánticos definidos en `src/globals.css` (bloque `@theme`). Tailwind v4 los expone como utilidades nativas (`bg-primary`, `text-foreground`, `border-border`, etc.).
+
+- **Prohibido** usar utilidades de color crudas de Tailwind (`bg-slate-*`, `text-indigo-*`, `from-zinc-*`, …) o valores arbitrarios (`bg-[#…]`, `text-[rgb(…)]`).
+- **Prohibido** referenciar variables de marca crudas (`--color-brand-*`) fuera de `globals.css`; siempre se consume el rol semántico (`primary`, `accent`, `success`, …).
+- Tokens disponibles: superficies (`background`, `surface`, `foreground`, `muted`, `border`), marca (`primary`, `secondary`, `accent`) y estados (`success`, `warning`, `danger`, `info`). Cada uno con su par `*-foreground` para el texto encima.
+- Estados visuales no-color (`opacity-*`, `shadow-*`, `backdrop-blur-*`) sí están permitidos.
+- Agregar un color nuevo = editar `globals.css` (paleta cruda → token semántico → su `*-foreground`). Nunca se consume la paleta cruda en componentes.
+
+Motivación: un único punto de cambio para rediseño/dark mode/alto contraste y coherencia visual entre páginas y futuros microservicios del front.
+
 ### Convenciones TS / Lint
 
 - `tsconfig.app.json` activa `verbatimModuleSyntax`, `erasableSyntaxOnly`, `noUnusedLocals`, `noUnusedParameters`. Usar `import type { … }` para tipos, y evitar `enum`/`namespace` (no son erasable).
