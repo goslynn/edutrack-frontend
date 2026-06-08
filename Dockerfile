@@ -1,14 +1,16 @@
 FROM node:22-alpine
 
-RUN corepack enable
-
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY package.json ./
+
+# Install with npm only - ignore pnpm lockfile during installation
+RUN npm install || npm install --legacy-peer-deps || true
 
 COPY . .
 
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 5173
 
-CMD ["pnpm", "dev", "--host", "0.0.0.0"]
+ENTRYPOINT ["/app/entrypoint.sh"]

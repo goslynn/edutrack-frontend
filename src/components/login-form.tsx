@@ -1,3 +1,4 @@
+import { FormEvent } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,10 +16,17 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
+interface LoginFormProps extends React.ComponentProps<"div"> {
+  onSubmit?: (e: FormEvent<HTMLFormElement>) => void
+  loading?: boolean
+}
+
 export function LoginForm({
   className,
+  onSubmit,
+  loading = false,
   ...props
-}: React.ComponentProps<"div">) {
+}: LoginFormProps) {
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -29,15 +37,17 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={onSubmit}>
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="m@example.com"
                   required
+                  disabled={loading}
                 />
               </Field>
               <Field>
@@ -50,11 +60,19 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  disabled={loading}
+                />
               </Field>
               <Field>
-                <Button type="submit">Login</Button>
-                <Button variant="outline" type="button">
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Iniciando sesión..." : "Login"}
+                </Button>
+                <Button variant="outline" type="button" disabled={loading}>
                   Login with Google
                 </Button>
                 <FieldDescription className="text-center">
