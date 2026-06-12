@@ -19,4 +19,12 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Primitivos shadcn vendoreados: upstream co-exporta sus variantes cva
+    // (buttonVariants, badgeVariants, …) desde el archivo del componente.
+    files: ['src/components/ui/**/*.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

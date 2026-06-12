@@ -1,58 +1,40 @@
-import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LoginForm } from '@/components/login-form'
 import { useLogin } from '@/hooks/useLogin'
-import type { LoginRequest } from '@/api/auth'
+import { ApiError } from '@/api/auth'
+import { LoginBrandPane } from '@/components/login-brand-pane'
+import { LoginForm, type LoginFormValues } from '@/components/login-form'
+
+function loginErrorMessage(error: Error | null): string | null {
+  if (!error) return null
+  if (error instanceof ApiError) {
+    if (error.response.status === 401) return 'Correo o contraseña incorrectos.'
+    return error.response.message
+  }
+  return 'No se pudo iniciar sesión. Revisa tu conexión e intenta nuevamente.'
+}
 
 export function LoginPage() {
   const navigate = useNavigate()
   const { execute, loading, error } = useLogin()
-  const [validationError, setValidationError] = useState<string>('')
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setValidationError('')
-
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-
-    if (!email || !password) {
-      setValidationError('Email y contraseña son requeridos')
-      return
-    }
-
+  const handleSubmit = async ({ email, password, remember }: LoginFormValues) => {
     try {
-      const credentials: LoginRequest = { email, password }
-      const response = await execute(credentials)
-
-      localStorage.setItem('accessToken', response.accessToken)
-      localStorage.setItem('refreshToken', response.refreshToken)
-
+      const { accessToken, refreshToken } = await execute({ email, password })
+      const storage = remember ? localStorage : sessionStorage
+      storage.setItem('accessToken', accessToken)
+      storage.setItem('refreshToken', refreshToken)
       navigate('/dashboard')
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al iniciar sesión'
-      setValidationError(message)
+    } catch {
+      // el error queda en el estado de useLogin y se muestra en el formulario
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-md">
-        <LoginForm onSubmit={handleSubmit} />
-
-        {(validationError || error) && (
-          <div className="mt-4 p-4 rounded-md bg-danger text-danger-foreground text-sm">
-            {validationError || error?.message}
-          </div>
-        )}
-
-        {loading && (
-          <div className="mt-4 p-4 rounded-md bg-primary text-primary-foreground text-sm text-center">
-            Iniciando sesión...
-          </div>
-        )}
-      </div>
+    <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
+      <LoginBrandPane />
+      <main className="flex items-center justify-center bg-background p-10">
+        <LoginForm onSubmit={handleSubmit} loading={loading} errorMessage={loginErrorMessage(error)} />
+      </main>
     </div>
   )
 }

@@ -1,0 +1,7 @@
+<svg width="178" height="44" viewBox="0 0 178 44" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EduTrack">
+  <path d="M2 16.5 L12 11 L22 16.5 L12 22 Z" fill="#219ebc"></path>
+  <path d="M6 19.7 L6 26 C6 26 8.7 28.5 12 28.5 C15.3 28.5 18 26 18 26 L18 19.7 L12 23 Z" fill="#023047"></path>
+  <path d="M22 16.5 L22 23.5" stroke="#ffb703" stroke-width="2.2" stroke-linecap="round"></path>
+  <circle cx="22" cy="25.6" r="1.7" fill="#fb8500"></circle>
+  <text x="34" y="29.5" font-family="Geist, system-ui, sans-serif" font-size="23" font-weight="600" letter-spacing="-0.5" fill="#023047">Edu<tspan fill="#219ebc">Track</tspan></text>
+</svg>

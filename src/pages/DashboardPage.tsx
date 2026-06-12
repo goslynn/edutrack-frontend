@@ -5,12 +5,14 @@ export function DashboardPage() {
   const navigate = useNavigate()
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+    for (const storage of [localStorage, sessionStorage]) {
+      storage.removeItem('accessToken')
+      storage.removeItem('refreshToken')
+    }
     navigate('/login')
   }
 
-  const accessToken = localStorage.getItem('accessToken')
+  const accessToken = localStorage.getItem('accessToken') ?? sessionStorage.getItem('accessToken')
 
   return (
     <div className="min-h-screen bg-background text-foreground">

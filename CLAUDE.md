@@ -11,10 +11,17 @@ Para el contexto de negocio, modelo de permisos y contratos del backend, leer:
 - `../doc/permisos.md` — modelo de autorización Unix-style (relevante para qué endpoints están autorizados a llamar y cómo interpretar 401/403).
 - `../doc/requisitos_libro_clases.csv` — matriz de requisitos (incluye los `FE-*` del frontend).
 - `../doc/edutrack_patterns.html` — patrones visuales/UX de referencia.
+- `doc/claude-design.md` — cómo se consume el sistema de diseño de Claude Design (fuente canónica visual).
 
-**Stack:** Vite + React 19 + TypeScript + Tailwind CSS. Package manager: **pnpm** (lockfile `pnpm-lock.yaml`).
+**Stack:** Vite + React 19 + TypeScript + Tailwind CSS v4 + shadcn (estilo `base-maia`, primitivas vendoreadas en `src/components/ui/`). Iconos **lucide-react**; fuente **Geist Variable** (+ Geist Mono) vía `@fontsource-variable/*`. Package manager: **pnpm** (lockfile `pnpm-lock.yaml`).
 
-> Tailwind aún no está instalado en el scaffold inicial — agregarlo al hacer el primer trabajo de UI real.
+### Sistema de diseño (Claude Design)
+
+La fuente canónica visual es el proyecto **"EduTrack Design System"** en claude.ai/design; se consume vía handoff bundles (ver `doc/claude-design.md` para la URL, estructura y proceso de re-sync). Reglas que fija:
+
+- **shadcn solo como librería de primitivas** — nunca importar blocks/page-templates pre-hechos; cada pantalla se compone a mano desde `src/components/ui/` con voz español (Chile).
+- Los tokens del DS (tintes `*-soft`, aliases shadcn, tipografía Geist, radios, sombras) viven en el `@theme` de `src/globals.css`; los logos (wordmark/mark, variantes `-light` para superficies oscuras, siempre sin fondo) en `src/assets/logo/`.
+- El diseño oficial del login es `templates/login/index.html` del bundle — implementado en `src/components/login-brand-pane.tsx`, `src/components/login-form.tsx` y `src/pages/LoginPage.tsx`. Decisiones cerradas: sin login con Google, sin nombre del colegio en la UI.
 
 ## Ejecución: siempre dentro de Docker (regla dura)
 
@@ -26,7 +33,21 @@ Excepciones admitidas (no requieren contenedor):
 - `pnpm install` / edición del lockfile (gestión de dependencias).
 - Operaciones de tooling puramente locales del editor (typecheck del IDE, etc.).
 
-> El `Dockerfile` / `docker-compose.yml` se agregan al hacer el primer trabajo de infra de runtime; cuando existan, registrar aquí los comandos canónicos.
+Comandos canónicos con el `Dockerfile` actual (multi-stage: `build` = deps + tsc + vite; `runtime` = `serve` estático en `:5173`):
+
+```bash
+# Verificar un cambio: typecheck + bundle dentro del contenedor (stage build)
+docker build --target build -t edutrack-front:verify --build-arg VITE_API_BASE_URL=http://localhost:8080 .
+
+# Lint dentro de la misma imagen
+docker run --rm edutrack-front:verify node_modules/.bin/eslint .
+
+# Imagen de runtime y servirla (VITE_API_BASE_URL se inlinea en build-time)
+docker build -t edutrack-front --build-arg VITE_API_BASE_URL=<url-gateway> .
+docker run --rm -p 5173:5173 edutrack-front
+```
+
+> Aún no hay `docker-compose.yml` ni target de dev con HMR; al agregarlos, registrar aquí sus comandos.
 
 ## Comandos (referencia, ejecutar dentro del contenedor)
 

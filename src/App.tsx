@@ -3,7 +3,9 @@ import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('accessToken')
+  // "Mantener sesión iniciada" decide el storage: localStorage si quedó marcado,
+  // sessionStorage si no — la sesión vive en uno u otro.
+  const token = localStorage.getItem('accessToken') ?? sessionStorage.getItem('accessToken')
   if (!token) {
     return <Navigate to="/login" replace />
   }

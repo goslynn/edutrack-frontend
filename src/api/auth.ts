@@ -16,18 +16,16 @@ export interface ErrorResponse {
   error: string
   code?: string
   message: string
-  path: string
   metadata?: Record<string, unknown>
 }
 
-export class AuthError extends Error {
-  constructor(
-    public statusCode: number,
-    public code: string | undefined,
-    message: string,
-  ) {
-    super(message)
-    this.name = 'AuthError'
+export class ApiError extends Error {
+  readonly response: ErrorResponse
+
+  constructor(response: ErrorResponse) {
+    super(response.message)
+    this.name = 'ApiError'
+    this.response = response
   }
 }
 
@@ -41,9 +39,8 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   })
 
   if (!response.ok) {
-    const error = (await response.json()) as ErrorResponse
-    throw new AuthError(response.status, error.code, error.message)
+    throw new ApiError((await response.json()) as ErrorResponse)
   }
 
-  return response.json() as Promise<LoginResponse>
+  return (await response.json()) as LoginResponse
 }

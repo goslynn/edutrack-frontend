@@ -1,6 +1,6 @@
 <svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EduTrack logomark">
-  <path d="M12 16.5 L22 11 L32 16.5 L22 22 Z" fill="#219ebc"></path>
-  <path d="M16 19.7 L16 26 C16 26 18.7 28.5 22 28.5 C25.3 28.5 28 26 28 26 L28 19.7 L22 23 Z" fill="#023047"></path>
+  <path d="M12 16.5 L22 11 L32 16.5 L22 22 Z" fill="#8ecae6"></path>
+  <path d="M16 19.7 L16 26 C16 26 18.7 28.5 22 28.5 C25.3 28.5 28 26 28 26 L28 19.7 L22 23 Z" fill="#ffffff"></path>
   <path d="M32 16.5 L32 23.5" stroke="#ffb703" stroke-width="2.2" stroke-linecap="round"></path>
   <circle cx="32" cy="25.6" r="1.7" fill="#fb8500"></circle>
 </svg>

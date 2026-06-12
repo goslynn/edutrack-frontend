@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { login, type LoginRequest, type LoginResponse, AuthError } from '@/api/auth'
+import { login, type LoginRequest, type LoginResponse } from '@/api/auth'
 
 interface UseLoginState {
   data: LoginResponse | null
@@ -27,6 +27,7 @@ export function useLogin(): UseLoginReturn {
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error')
       setState({ data: null, loading: false, error })
+      console.debug(error)
       throw error
     }
   }
