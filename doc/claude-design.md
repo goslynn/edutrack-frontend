@@ -57,6 +57,8 @@ recrea su output visual con la tecnología del repo, no se copia su estructura i
 | `tokens/fonts.css` (`@font-face` Geist/Geist Mono) | paquetes `@fontsource-variable/geist{,-mono}` importados desde `src/globals.css` |
 | `assets/logo/*.svg` (4 variantes, sin fondo) | `src/assets/logo/` + `public/favicon.svg` (el mark) |
 | `templates/login/index.html` (login oficializado) | `src/components/login-brand-pane.tsx`, `src/components/login-form.tsx`, `src/pages/LoginPage.tsx` |
+| `components/navigation/Sidebar.jsx` + `data/Badge,Avatar` + `navigation/Tabs` (primitivas del DS) | re-creadas como primitivas en `src/components/ui/{sidebar,badge,avatar,tabs}.tsx` (Tailwind + tokens, no se copia el CSS inyectado) |
+| `templates/dashboard/{index.html,dashboard.jsx,charts.jsx,data.js}` (home post-login «Inicio») | `src/pages/DashboardPage.tsx` (contenedor) + `src/components/dashboard/*` (shell, topbar, stats, charts SVG, accesos directos, 3 variantes de layout) + `src/data/dashboard-stub.ts` (datos de muestra). Token nuevo `--color-warning-strong` (#b07a00) para texto ámbar legible sobre tinte. |
 | `components/forms/*` (primitivas del DS) | **No se copian.** Son re-creaciones para el design tool; en producción las primitivas son shadcn `base-maia` en `src/components/ui/`, re-skinneadas vía tokens |
 
 ## Reglas que el diseño fija (y este repo respeta)

@@ -84,6 +84,11 @@
   --color-warning-soft: #fff6da;
   --color-danger-soft: #fbe7e7;
 
+  /* Ámbar oscurecido para TEXTO/íconos sobre superficies claras: el `warning`
+   * (#ffb703) es demasiado claro para leerse sobre `warning-soft` o blanco, así
+   * que el rol de "warning fuerte" usa este tono para texto, badges y barras. */
+  --color-warning-strong: #b07a00;
+
   /* --- Aliases de paridad shadcn (los consumen los primitivos de components/ui) --- */
   --color-card: #ffffff;
   --color-card-foreground: #023047;
