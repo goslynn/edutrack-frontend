@@ -1,6 +1,6 @@
 import { ChevronRightIcon } from "lucide-react"
 
-import type { QuickAction, SectionId, Shortcut } from "@/data/dashboard-stub"
+import type { QuickAction, SectionId, Shortcut } from "@/types/dashboard"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { DashIcon } from "./dash-icon"

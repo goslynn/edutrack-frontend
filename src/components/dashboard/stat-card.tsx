@@ -1,6 +1,6 @@
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react"
 
-import type { QuickStat } from "@/data/dashboard-stub"
+import type { QuickStat } from "@/types/dashboard"
 import { cn } from "@/lib/utils"
 import { DashIcon } from "./dash-icon"
 import { ICON_TINT } from "./tints"

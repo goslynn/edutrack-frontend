@@ -71,6 +71,17 @@ Toda la capa visual es **exclusivamente visual**. Las funciones que ejecutan efe
 - Las llamadas HTTP viven en una capa separada (`src/api/<servicio>.ts` u `src/services/`), tipadas contra el contrato del MS correspondiente, y se cablean en componentes "container" (páginas / hooks de feature).
 - Los hooks de feature (`useLogin`, `useCourses`, …) orquestan estado + llamadas API y pasan handlers ya construidos a la capa visual.
 
+### Routing: una vista = una ruta (regla dura)
+
+Toda vista o pantalla distinta **debe** tener su propio path y alcanzarse por **navegación** (React Router), nunca alternando vistas con estado interno (`useState` del tipo `active`/`panel` + render condicional). El URL es la única fuente de verdad de "dónde estoy": permite recargar, compartir el enlace y usar atrás/adelante del navegador.
+
+- **Prohibido** un componente que conmuta entre pantallas completas según su propio estado. Si una "pantalla" puede abrirse y cerrarse (un panel, un detalle, un sub-flujo), es una ruta — no un flag. Sí siguen siendo estado local los estados puramente visuales que no son una vista (un modal/dropdown/acordeón, tabs dentro de una misma pantalla).
+- **Layout persistente + `<Outlet>`:** el cromo que se mantiene entre vistas (sidebar, topbar, breadcrumb) vive en un componente *layout* que renderiza `<Outlet>`; el contenido que varía son las rutas hijas. Ver `components/dashboard/dashboard-layout.tsx` (shell global) y `pages/dashboard/configuracion/ConfiguracionPage.tsx` (sub-layout con breadcrumb). Las sub-pantallas de una sección anidan bajo su ruta (`/dashboard/configuracion/:panelId`).
+- **El ítem activo se deriva del path, no se guarda.** El resaltado de la navegación se calcula desde `location.pathname` (ver `idFromPath` en `components/dashboard/nav-config.tsx`, que toma el prefijo más largo para que las subrutas resalten su ítem padre). No duplicar el "active" en estado.
+- **El path se inyecta como dato, no se hardcodea en el visual.** La config de navegación (`nav-config.tsx`) declara el `path` de cada ítem; el componente visual (`Sidebar`) lo recibe por props y la **navegación se inyecta** igual que cualquier otro efecto (`onNavigate` → `navigate(path)`), coherente con la separación visual/interacción.
+- **Estado compartido entre layout y sus rutas** viaja por el `context` del `<Outlet>` (`useOutletContext`), no por props perforadas ni estado global: p. ej. el curso seleccionado del topbar lo consumen las páginas de Asistencia/Anotaciones.
+- **Páginas = containers.** Solo los archivos bajo `pages/` conocen el router (`useNavigate`, `useParams`, `useOutletContext`) y cablean los handlers de navegación que pasan a la capa visual. Un componente bajo `components/` nunca importa el router (igual que no importa el cliente HTTP).
+
 ### Componetización
 
 Priorizar componetización agresiva siguiendo el estándar React + TS:

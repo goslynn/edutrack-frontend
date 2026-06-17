@@ -1,4 +1,4 @@
-import type { TrendPoint } from "@/data/dashboard-stub"
+import type { TrendPoint } from "@/types/dashboard"
 import { useChartWidth } from "./use-chart-width"
 
 interface TrendLineProps {

@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils"
 
 export interface NavItem {
   id: string
+  /** Ruta a la que navega el ítem (la inyecta la config de navegación). */
+  path: string
   label: ReactNode
   icon?: ReactNode
   badge?: ReactNode

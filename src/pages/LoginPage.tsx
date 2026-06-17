@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useLogin } from '@/hooks/useLogin'
-import { ApiError } from '@/api/auth'
+import { ApiError } from '@/api/errors'
+import { saveSession } from '@/lib/session'
 import { LoginBrandPane } from '@/components/login-brand-pane'
 import { LoginForm, type LoginFormValues } from '@/components/login-form'
 
@@ -18,15 +19,10 @@ export function LoginPage() {
   const { execute, loading, error } = useLogin()
 
   const handleSubmit = async ({ email, password, remember }: LoginFormValues) => {
-    try {
-      const { accessToken, refreshToken } = await execute({ email, password })
-      const storage = remember ? localStorage : sessionStorage
-      storage.setItem('accessToken', accessToken)
-      storage.setItem('refreshToken', refreshToken)
-      navigate('/dashboard')
-    } catch {
-      // el error queda en el estado de useLogin y se muestra en el formulario
-    }
+    const tokens = await execute({ email, password })
+    if (!tokens) return // el error queda en el estado de useLogin y se muestra en el formulario
+    saveSession(tokens, { remember })
+    navigate('/dashboard')
   }
 
   return (

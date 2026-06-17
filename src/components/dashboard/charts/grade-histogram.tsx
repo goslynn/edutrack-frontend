@@ -1,4 +1,4 @@
-import type { GradeBucket, GradeTone } from "@/data/dashboard-stub"
+import type { GradeBucket, GradeTone } from "@/types/dashboard"
 import { useChartWidth } from "./use-chart-width"
 
 interface GradeHistogramProps {

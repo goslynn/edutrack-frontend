@@ -1,4 +1,4 @@
-import type { StatTint } from "@/data/dashboard-stub"
+import type { StatTint } from "@/types/dashboard"
 
 /** Pares fondo/texto (tinte suave) por rol, solo tokens semánticos. */
 export const ICON_TINT: Record<StatTint, string> = {

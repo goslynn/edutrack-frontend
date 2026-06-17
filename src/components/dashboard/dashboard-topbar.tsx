@@ -6,7 +6,7 @@ import {
   SearchIcon,
 } from "lucide-react"
 
-import type { Course, DashboardNotification } from "@/data/dashboard-stub"
+import type { Course, DashboardNotification } from "@/types/dashboard"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 

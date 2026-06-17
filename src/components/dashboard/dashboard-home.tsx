@@ -1,6 +1,6 @@
 import { CalendarCheckIcon, DownloadIcon } from "lucide-react"
 
-import type { DashboardData, SectionId } from "@/data/dashboard-stub"
+import type { DashboardData, SectionId } from "@/types/dashboard"
 import { Button } from "@/components/ui/button"
 import { Tabs } from "@/components/ui/tabs"
 import { AttendanceBars } from "./charts/attendance-bars"

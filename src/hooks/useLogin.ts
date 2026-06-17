@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login, type LoginRequest, type LoginResponse } from '@/api/auth'
+import { failureToError } from '@/api/errors'
 
 interface UseLoginState {
   data: LoginResponse | null
@@ -8,7 +9,8 @@ interface UseLoginState {
 }
 
 interface UseLoginReturn extends UseLoginState {
-  execute: (credentials: LoginRequest) => Promise<LoginResponse>
+  /** Ejecuta el login; devuelve los tokens o `null` (el fallo queda en `error`). */
+  execute: (credentials: LoginRequest) => Promise<LoginResponse | null>
 }
 
 export function useLogin(): UseLoginReturn {
@@ -18,18 +20,18 @@ export function useLogin(): UseLoginReturn {
     error: null,
   })
 
-  const execute = async (credentials: LoginRequest): Promise<LoginResponse> => {
+  const execute = async (credentials: LoginRequest): Promise<LoginResponse | null> => {
     setState({ data: null, loading: true, error: null })
-    try {
-      const response = await login(credentials)
-      setState({ data: response, loading: false, error: null })
-      return response
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error')
-      setState({ data: null, loading: false, error })
-      console.debug(error)
-      throw error
+
+    const result = await login(credentials)
+    if (result.ok) {
+      setState({ data: result.value, loading: false, error: null })
+      return result.value
     }
+
+    const error = failureToError(result.error)
+    setState({ data: null, loading: false, error })
+    return null
   }
 
   return {

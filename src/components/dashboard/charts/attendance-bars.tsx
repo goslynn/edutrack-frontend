@@ -1,4 +1,4 @@
-import type { AttendanceDay } from "@/data/dashboard-stub"
+import type { AttendanceDay } from "@/types/dashboard"
 import { useChartWidth } from "./use-chart-width"
 
 interface AttendanceBarsProps {
