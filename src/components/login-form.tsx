@@ -88,16 +88,6 @@ export function LoginForm({
         <Field>
           <div className="flex items-baseline justify-between gap-3">
             <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-            <a
-              href="#"
-              className="text-xs whitespace-nowrap text-primary hover:underline"
-              onClick={(e) => {
-                e.preventDefault()
-                onForgotPassword?.()
-              }}
-            >
-              ¿Olvidaste tu contraseña?
-            </a>
           </div>
           <div className="relative">
             <Input
@@ -150,6 +140,17 @@ export function LoginForm({
             Solicita acceso
           </a>
         </p>
+
+        <a
+            href="#"
+            className="text-center text-sm font-medium text-primary hover:underline"
+            onClick={(e) => {
+              e.preventDefault()
+              onForgotPassword?.()
+            }}
+        >
+          ¿Olvidaste tu contraseña?
+        </a>
       </form>
 
       <p className="mt-5 text-center text-xs leading-snug text-muted">
