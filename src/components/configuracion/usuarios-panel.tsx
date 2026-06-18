@@ -1,18 +1,18 @@
 import { useRef, useState } from "react"
+import { Menu } from "@base-ui/react/menu"
 import {
   ArrowLeftIcon,
   BanIcon,
   CircleCheckIcon,
   EllipsisVerticalIcon,
+  Loader2Icon,
   PencilIcon,
   SearchIcon,
-  SendIcon,
-  Trash2Icon,
   UserPlusIcon,
   UsersIcon,
 } from "lucide-react"
 
-import type { OrgUser, UserRole, UserStatus } from "@/types/configuracion"
+import type { AuthRole, AuthUser, CreateUserInput, UpdateUserInput } from "@/types/usuarios"
 import { cn } from "@/lib/utils"
 import { Alert } from "@/components/ui/alert"
 import { Avatar } from "@/components/ui/avatar"
@@ -21,20 +21,17 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { UserDialog, type UserDialogResult } from "./user-dialog"
 
-const STATUS: Record<UserStatus, { label: string; variant: "success" | "neutral" | "warning" }> = {
-  activo: { label: "Activo", variant: "success" },
-  inhabilitado: { label: "Inhabilitado", variant: "neutral" },
-  pendiente: { label: "Pendiente", variant: "warning" },
-}
-
-function RoleBadges({ roleIds, roles }: { roleIds: string[]; roles: UserRole[] }) {
-  const roleLabel = (id: string) => roles.find((r) => r.id === id)?.label ?? id
+function RoleBadges({ roleIds, roles }: { roleIds: string[]; roles: AuthRole[] }) {
+  const roleLabel = (id: string) => roles.find((r) => r.id === id)?.name ?? id
   const shown = roleIds.slice(0, 2)
   const extra = roleIds.length - shown.length
+  if (roleIds.length === 0) {
+    return <span className="text-[12.5px] text-muted">Sin roles</span>
+  }
   return (
     <span className="inline-flex flex-wrap gap-1.5">
       {shown.map((r) => (
-        <Badge key={r} variant={r === "admin" ? "primary" : "neutral"}>
+        <Badge key={r} variant="neutral">
           {roleLabel(r)}
         </Badge>
       ))}
@@ -44,182 +41,150 @@ function RoleBadges({ roleIds, roles }: { roleIds: string[]; roles: UserRole[] }
 }
 
 interface RowMenuProps {
-  user: OrgUser
-  onEdit: (u: OrgUser) => void
-  onToggle: (u: OrgUser) => void
-  onResend: (u: OrgUser) => void
-  onDelete: (u: OrgUser) => void
+  user: AuthUser
+  self: boolean
+  busy: boolean
+  onEdit: (u: AuthUser) => void
+  onToggle: (u: AuthUser) => void
 }
 
-function RowMenu({ user, onEdit, onToggle, onResend, onDelete }: RowMenuProps) {
-  const [open, setOpen] = useState(false)
+function RowMenu({ user, self, busy, onEdit, onToggle }: RowMenuProps) {
   const item =
-    "flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-[13px] font-medium text-foreground transition-colors outline-none hover:bg-surface [&_svg]:size-[15px] [&_svg]:flex-none [&_svg]:text-muted"
+    "flex w-full cursor-pointer items-center gap-2.5 rounded-sm px-2.5 py-2 text-[13px] font-medium text-foreground transition-colors outline-none select-none hover:bg-surface data-[highlighted]:bg-surface data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:size-[15px] [&_svg]:flex-none [&_svg]:text-muted"
   return (
-    <div className="relative inline-flex">
-      <button
-        type="button"
+    <Menu.Root>
+      <Menu.Trigger
         aria-label="Acciones"
-        onClick={() => setOpen((v) => !v)}
-        className="grid size-8 place-items-center rounded-md text-muted transition-colors outline-none hover:bg-surface hover:text-foreground"
+        className="grid size-8 place-items-center rounded-md text-muted transition-colors outline-none hover:bg-surface hover:text-foreground data-[popup-open]:bg-surface data-[popup-open]:text-foreground"
       >
         <EllipsisVerticalIcon className="size-[17px]" />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div
-            role="menu"
-            className="absolute top-9 right-0 z-[31] min-w-[196px] rounded-lg border border-border bg-background p-1.5 shadow-lg"
-          >
-            <button
-              type="button"
-              className={item}
-              onClick={() => {
-                setOpen(false)
-                onEdit(user)
-              }}
-            >
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="end" sideOffset={6} className="z-50 outline-none">
+          <Menu.Popup className="min-w-[196px] rounded-lg border border-border bg-background p-1.5 shadow-lg outline-none">
+            <Menu.Item className={item} onClick={() => onEdit(user)}>
               <PencilIcon /> Editar
-            </button>
-            {user.status === "pendiente" && (
-              <button
-                type="button"
-                className={item}
-                onClick={() => {
-                  setOpen(false)
-                  onResend(user)
-                }}
-              >
-                <SendIcon /> Reenviar invitación
-              </button>
+            </Menu.Item>
+            {!self && (
+              <Menu.Item className={item} disabled={busy} onClick={() => onToggle(user)}>
+                {user.enabled ? (
+                  <>
+                    <BanIcon /> Inhabilitar
+                  </>
+                ) : (
+                  <>
+                    <CircleCheckIcon /> Habilitar
+                  </>
+                )}
+              </Menu.Item>
             )}
-            {!user.you && user.status !== "inhabilitado" && (
-              <button
-                type="button"
-                className={item}
-                onClick={() => {
-                  setOpen(false)
-                  onToggle(user)
-                }}
-              >
-                <BanIcon /> Inhabilitar
-              </button>
-            )}
-            {!user.you && user.status === "inhabilitado" && (
-              <button
-                type="button"
-                className={item}
-                onClick={() => {
-                  setOpen(false)
-                  onToggle(user)
-                }}
-              >
-                <CircleCheckIcon /> Habilitar
-              </button>
-            )}
-            {!user.you && (
-              <>
-                <div className="my-1 h-px bg-border" />
-                <button
-                  type="button"
-                  className={cn(item, "text-danger [&_svg]:text-danger")}
-                  onClick={() => {
-                    setOpen(false)
-                    onDelete(user)
-                  }}
-                >
-                  <Trash2Icon /> Eliminar
-                </button>
-              </>
-            )}
-          </div>
-        </>
-      )}
-    </div>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   )
 }
 
 interface UsuariosPanelProps {
-  /** Usuarios semilla (en producción, de Auth). */
-  users: OrgUser[]
-  /** Catálogo de roles para etiquetas y filtros (en producción, de Auth). */
-  roles: UserRole[]
+  /** Usuarios entregados por Auth (vía BFF). El panel no mantiene copia local. */
+  users: AuthUser[]
+  /** Catálogo de roles para etiquetas, filtros y asignación. */
+  roles: AuthRole[]
+  /** Id del usuario autenticado: no puede inhabilitarse a sí mismo. */
+  currentUserId?: string | null
+  loading?: boolean
+  /** Error de carga (cada mutación reporta su propio error vía los handlers). */
+  error?: string | null
+  onCreate: (input: CreateUserInput) => Promise<string | null>
+  onUpdate: (id: string, patch: UpdateUserInput, roleIds: string[]) => Promise<string | null>
+  onToggleEnabled: (user: AuthUser, enabled: boolean) => Promise<string | null>
   onBack: () => void
 }
 
-/** Panel Usuarios: CRUD sobre el recurso usuario (listado + alta/edición + estado). */
-export function UsuariosPanel({ users: seedUsers, roles, onBack }: UsuariosPanelProps) {
-  const [users, setUsers] = useState<OrgUser[]>(() => seedUsers.map((u) => ({ ...u })))
+/** Panel Usuarios: listado + alta/edición + habilitar/inhabilitar sobre Auth. */
+export function UsuariosPanel({
+  users,
+  roles,
+  currentUserId,
+  loading = false,
+  error = null,
+  onCreate,
+  onUpdate,
+  onToggleEnabled,
+  onBack,
+}: UsuariosPanelProps) {
   const [q, setQ] = useState("")
   const [roleF, setRoleF] = useState("all")
   const [statusF, setStatusF] = useState("all")
-  const [dialog, setDialog] = useState<{ mode: "create" | "edit"; initial?: OrgUser } | null>(null)
-  const [toast, setToast] = useState<{ variant: "success"; msg: string } | null>(null)
+  const [dialog, setDialog] = useState<{ mode: "create" | "edit"; initial?: AuthUser } | null>(
+    null
+  )
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [toast, setToast] = useState<{ variant: "success" | "danger"; msg: string } | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  const flash = (msg: string) => {
-    setToast({ variant: "success", msg })
+  const flash = (variant: "success" | "danger", msg: string) => {
+    setToast({ variant, msg })
     clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 2600)
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
   }
 
   const filtered = users.filter((u) => {
-    const t = (u.name + " " + u.email + " " + u.username).toLowerCase()
+    const t = (u.displayName + " " + u.email).toLowerCase()
     if (q && !t.includes(q.toLowerCase())) return false
-    if (roleF !== "all" && !u.roles.includes(roleF)) return false
-    if (statusF !== "all" && u.status !== statusF) return false
+    if (roleF !== "all" && !u.roleIds.includes(roleF)) return false
+    if (statusF === "activo" && !u.enabled) return false
+    if (statusF === "inhabilitado" && u.enabled) return false
     return true
   })
 
-  const onToggle = (user: OrgUser) => {
-    setUsers((us) =>
-      us.map((u) =>
-        u.id === user.id
-          ? { ...u, status: u.status === "inhabilitado" ? "activo" : "inhabilitado" }
-          : u
+  const onToggle = async (user: AuthUser) => {
+    setBusyId(user.id)
+    const err = await onToggleEnabled(user, !user.enabled)
+    setBusyId(null)
+    if (err) flash("danger", err)
+    else
+      flash(
+        "success",
+        user.enabled
+          ? `${user.displayName} fue inhabilitado.`
+          : `${user.displayName} fue habilitado.`
       )
-    )
-    flash(
-      user.status === "inhabilitado"
-        ? `${user.name} fue habilitado.`
-        : `${user.name} fue inhabilitado.`
-    )
-  }
-  const onResend = (user: OrgUser) => flash(`Invitación reenviada a ${user.email}.`)
-  const onDelete = (user: OrgUser) => {
-    setUsers((us) => us.filter((u) => u.id !== user.id))
-    flash(`${user.name} fue eliminado.`)
   }
 
-  const onSubmit = (data: UserDialogResult) => {
+  const onSubmit = async (data: UserDialogResult) => {
+    setSubmitting(true)
     if (dialog?.mode === "edit" && dialog.initial) {
-      const id = dialog.initial.id
-      setUsers((us) =>
-        us.map((u) =>
-          u.id === id
-            ? { ...u, email: data.email, username: data.username, roles: data.roles }
-            : u
-        )
+      const err = await onUpdate(
+        dialog.initial.id,
+        { displayName: data.displayName },
+        data.roleIds
       )
-      flash("Cambios guardados.")
-    } else {
-      const nu: OrgUser = {
-        id: "u" + Date.now(),
-        name: data.name,
-        email: data.email,
-        username: data.username,
-        roles: data.roles,
-        status: "activo",
-        last: "recién",
+      setSubmitting(false)
+      if (err) {
+        flash("danger", err)
+        return
       }
-      setUsers((us) => [nu, ...us])
-      flash(`${data.name} fue creado.`)
+      flash("success", "Cambios guardados.")
+    } else {
+      const err = await onCreate({
+        email: data.email,
+        password: data.password,
+        displayName: data.displayName,
+        roleIds: data.roleIds,
+      })
+      setSubmitting(false)
+      if (err) {
+        flash("danger", err)
+        return
+      }
+      flash("success", `${data.displayName} fue creado.`)
     }
     setDialog(null)
   }
 
-  const activos = users.filter((u) => u.status === "activo").length
+  const activos = users.filter((u) => u.enabled).length
 
   return (
     <div className="mx-auto max-w-[1060px] px-8 pt-7 pb-16">
@@ -233,9 +198,7 @@ export function UsuariosPanel({ users: seedUsers, roles, onBack }: UsuariosPanel
 
       <header className="mt-0.5 mb-[18px] flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl leading-tight font-semibold tracking-tight">
-            Usuarios
-          </h1>
+          <h1 className="text-2xl leading-tight font-semibold tracking-tight">Usuarios</h1>
           <p className="mt-2 text-sm text-muted">
             {users.length} usuarios · {activos} activos en tu organización.
           </p>
@@ -251,13 +214,19 @@ export function UsuariosPanel({ users: seedUsers, roles, onBack }: UsuariosPanel
         </div>
       )}
 
+      {error && (
+        <div className="mb-3.5">
+          <Alert variant="danger">{error}</Alert>
+        </div>
+      )}
+
       <div className="mb-3.5 flex flex-wrap gap-2.5">
         <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-muted">
           <SearchIcon className="size-4 flex-none" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nombre, correo o usuario…"
+            placeholder="Buscar por nombre o correo…"
             className="w-full border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
           />
         </div>
@@ -270,7 +239,7 @@ export function UsuariosPanel({ users: seedUsers, roles, onBack }: UsuariosPanel
           <option value="all">Todos los roles</option>
           {roles.map((r) => (
             <option key={r.id} value={r.id}>
-              {r.label}
+              {r.name}
             </option>
           ))}
         </Select>
@@ -283,7 +252,6 @@ export function UsuariosPanel({ users: seedUsers, roles, onBack }: UsuariosPanel
           <option value="all">Todos los estados</option>
           <option value="activo">Activos</option>
           <option value="inhabilitado">Inhabilitados</option>
-          <option value="pendiente">Pendientes</option>
         </Select>
       </div>
 
@@ -294,63 +262,71 @@ export function UsuariosPanel({ users: seedUsers, roles, onBack }: UsuariosPanel
               <th>Usuario</th>
               <th>Roles</th>
               <th>Estado</th>
-              <th className="hidden md:table-cell">Último acceso</th>
               <th aria-label="Acciones"></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u) => (
-              <tr
-                key={u.id}
-                className={cn(
-                  "border-b border-border text-[13.5px] last:border-b-0 hover:bg-surface/55 [&>td]:px-4 [&>td]:py-[11px] [&>td]:align-middle",
-                  u.status === "inhabilitado" && "opacity-55"
-                )}
-              >
-                <td>
-                  <div className="flex items-center gap-3">
-                    <Avatar name={u.name} size="md" />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-[13.5px] font-semibold">
-                        {u.name}
-                        {u.you && (
-                          <span className="rounded-full bg-primary-soft px-1.5 py-px text-[10px] font-semibold tracking-[0.04em] text-primary uppercase">
-                            Tú
-                          </span>
-                        )}
+            {filtered.map((u) => {
+              const self = u.id === currentUserId
+              return (
+                <tr
+                  key={u.id}
+                  className={cn(
+                    "border-b border-border text-[13.5px] last:border-b-0 hover:bg-surface/55 [&>td]:px-4 [&>td]:py-[11px] [&>td]:align-middle",
+                    !u.enabled && "opacity-55"
+                  )}
+                >
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <Avatar name={u.displayName} size="md" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-[13.5px] font-semibold">
+                          {u.displayName}
+                          {self && (
+                            <span className="rounded-full bg-primary-soft px-1.5 py-px text-[10px] font-semibold tracking-[0.04em] text-primary uppercase">
+                              Tú
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[12.5px] text-muted">{u.email}</div>
                       </div>
-                      <div className="text-[12.5px] text-muted">{u.email}</div>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <RoleBadges roleIds={u.roles} roles={roles} />
-                </td>
-                <td>
-                  <Badge variant={STATUS[u.status].variant} dot>
-                    {STATUS[u.status].label}
-                  </Badge>
-                </td>
-                <td className="hidden md:table-cell">
-                  <span className="text-[13px] text-muted">{u.last}</span>
-                </td>
-                <td className="w-12 text-right">
-                  <RowMenu
-                    user={u}
-                    onEdit={(x) => setDialog({ mode: "edit", initial: x })}
-                    onToggle={onToggle}
-                    onResend={onResend}
-                    onDelete={onDelete}
-                  />
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td>
+                    <RoleBadges roleIds={u.roleIds} roles={roles} />
+                  </td>
+                  <td>
+                    <Badge variant={u.enabled ? "success" : "neutral"} dot>
+                      {u.enabled ? "Activo" : "Inhabilitado"}
+                    </Badge>
+                  </td>
+                  <td className="w-12 text-right">
+                    <RowMenu
+                      user={u}
+                      self={self}
+                      busy={busyId === u.id}
+                      onEdit={(x) => setDialog({ mode: "edit", initial: x })}
+                      onToggle={onToggle}
+                    />
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="flex flex-col items-center gap-2 p-12 text-center text-[13.5px] text-muted">
             <UsersIcon className="size-[22px] text-border" />
-            <div>No hay usuarios que coincidan con el filtro.</div>
+            <div>
+              {users.length === 0
+                ? "Aún no hay usuarios."
+                : "No hay usuarios que coincidan con el filtro."}
+            </div>
+          </div>
+        )}
+        {loading && (
+          <div className="flex items-center justify-center gap-2 p-12 text-[13.5px] text-muted">
+            <Loader2Icon className="size-4 animate-spin" /> Cargando usuarios…
           </div>
         )}
       </div>
@@ -360,7 +336,10 @@ export function UsuariosPanel({ users: seedUsers, roles, onBack }: UsuariosPanel
           mode={dialog.mode}
           initial={dialog.initial}
           availableRoles={roles}
-          onClose={() => setDialog(null)}
+          submitting={submitting}
+          onClose={() => {
+            if (!submitting) setDialog(null)
+          }}
           onSubmit={onSubmit}
         />
       )}

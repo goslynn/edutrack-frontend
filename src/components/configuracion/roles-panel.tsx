@@ -421,6 +421,7 @@ function RoleEditor({
   catalog,
   total,
   serviceCount,
+  saving,
   onCancel,
   onApply,
 }: {
@@ -429,8 +430,9 @@ function RoleEditor({
   catalog: CatalogGroup[]
   total: number
   serviceCount: number
+  saving: boolean
   onCancel: () => void
-  onApply: (draft: Draft) => void
+  onApply: (draft: Draft) => Promise<void>
 }) {
   const [name, setName] = useState(role.name)
   const [perms, setPerms] = useState<Record<string, number>>(() => ({ ...role.perms }))
@@ -509,10 +511,10 @@ function RoleEditor({
             Cancelar
           </Button>
           <Button
-            disabled={!valid}
-            onClick={() => onApply({ ...role, name: name.trim(), perms })}
+            disabled={!valid || saving}
+            onClick={() => void onApply({ ...role, name: name.trim(), perms })}
           >
-            <CheckIcon /> Aplicar
+            {saving ? "Guardando…" : <><CheckIcon /> Aplicar</>}
           </Button>
         </div>
       </div>
@@ -530,6 +532,14 @@ interface RolesPanelProps {
   permServices: PermService[]
   /** Permisos asignados por rol { roleId: { resourceId: flagByte } }. */
   rolePermissions: RolePermissions
+  /** Carga inicial en curso (muestra esqueleto en la lista). */
+  loading?: boolean
+  /** Error de carga (muestra alerta en la lista en lugar del contenido). */
+  error?: string | null
+  /** Si se pasa, crea el rol y sus permisos vía API. Devuelve `null` o mensaje de error. */
+  onCreateRole?: (name: string, desc: string, perms: Record<string, number>) => Promise<string | null>
+  /** Si se pasa, actualiza el rol y reconcilia permisos vía API. Devuelve `null` o mensaje de error. */
+  onUpdateRole?: (id: string, name: string, perms: Record<string, number>) => Promise<string | null>
   onBack: () => void
 }
 
@@ -543,6 +553,10 @@ export function RolesPanel({
   roles: seedRoles,
   permServices,
   rolePermissions: seedPermissions,
+  loading = false,
+  error = null,
+  onCreateRole,
+  onUpdateRole,
   onBack,
 }: RolesPanelProps) {
   const [roles, setRoles] = useState<Role[]>(() => seedRoles.map((r) => ({ ...r })))
@@ -555,13 +569,23 @@ export function RolesPanel({
     null
   )
   const [creating, setCreating] = useState(false)
-  const [toast, setToast] = useState<{ variant: "success"; msg: string } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState<{ variant: "success" | "danger"; msg: string } | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  const flash = (msg: string) => {
-    setToast({ variant: "success", msg })
+  // Sincroniza el estado local cuando los props se recargan desde la API.
+  useEffect(() => {
+    setRoles(seedRoles.map((r) => ({ ...r })))
+  }, [seedRoles])
+
+  useEffect(() => {
+    setPerms(structuredClone(seedPermissions))
+  }, [seedPermissions])
+
+  const flash = (msg: string, variant: "success" | "danger" = "success") => {
+    setToast({ variant, msg })
     clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 2800)
+    toastTimer.current = setTimeout(() => setToast(null), 3200)
   }
 
   const openExisting = (role: Role) =>
@@ -575,8 +599,31 @@ export function RolesPanel({
     })
   }
 
-  const onApply = (draft: Draft) => {
+  const onApply = async (draft: Draft) => {
+    if (saving) return
     const mode = editing?.mode
+
+    if (mode === "create" && onCreateRole) {
+      setSaving(true)
+      const err = await onCreateRole(draft.name, draft.desc, draft.perms)
+      setSaving(false)
+      if (err) { flash(err, "danger"); return }
+      setEditing(null)
+      flash(`Rol «${draft.name}» creado y permisos aplicados.`)
+      return
+    }
+
+    if (mode === "edit" && onUpdateRole) {
+      setSaving(true)
+      const err = await onUpdateRole(draft.id, draft.name, draft.perms)
+      setSaving(false)
+      if (err) { flash(err, "danger"); return }
+      setEditing(null)
+      flash(`Permisos de «${draft.name}» actualizados.`)
+      return
+    }
+
+    // Modo sin API (stub): actualiza solo estado local.
     setPerms((p) => ({ ...p, [draft.id]: draft.perms }))
     if (mode === "create") {
       setRoles((rs) => [
@@ -601,6 +648,7 @@ export function RolesPanel({
         catalog={catalog}
         total={total}
         serviceCount={permServices.length}
+        saving={saving}
         onCancel={() => setEditing(null)}
         onApply={onApply}
       />
@@ -623,30 +671,51 @@ export function RolesPanel({
             Roles y permisos
           </h1>
           <p className="mt-2 text-sm text-muted">
-            {roles.length} roles · define qué puede ver y hacer cada uno.
+            {loading ? "Cargando…" : `${roles.length} roles · define qué puede ver y hacer cada uno.`}
           </p>
         </div>
-        <Button onClick={() => setCreating(true)}>
+        <Button onClick={() => setCreating(true)} disabled={loading}>
           <PlusIcon /> Nuevo rol
         </Button>
       </header>
 
-      {toast && (
+      {error && (
+        <div className="mb-3.5">
+          <Alert variant="danger">{error}</Alert>
+        </div>
+      )}
+
+      {toast && !error && (
         <div className="mb-3.5">
           <Alert variant={toast.variant}>{toast.msg}</Alert>
         </div>
       )}
 
       <div className="flex flex-col overflow-hidden rounded-xl bg-background ring-1 ring-foreground/10">
-        {roles.map((r) => (
-          <RoleListRow
-            key={r.id}
-            role={r}
-            perms={perms[r.id]}
-            total={total}
-            onOpen={openExisting}
-          />
-        ))}
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3.5 border-t border-border px-[18px] py-[15px] first:border-t-0"
+            >
+              <span className="size-10 flex-none animate-pulse rounded-[11px] bg-surface" />
+              <span className="flex flex-1 flex-col gap-1.5">
+                <span className="h-3.5 w-32 animate-pulse rounded bg-surface" />
+                <span className="h-3 w-48 animate-pulse rounded bg-surface" />
+              </span>
+            </div>
+          ))
+        ) : (
+          roles.map((r) => (
+            <RoleListRow
+              key={r.id}
+              role={r}
+              perms={perms[r.id]}
+              total={total}
+              onOpen={openExisting}
+            />
+          ))
+        )}
       </div>
 
       <p className="mx-0.5 mt-3.5 flex items-center gap-1.5 text-[12.5px] leading-normal text-muted">

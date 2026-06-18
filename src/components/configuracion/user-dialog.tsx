@@ -5,10 +5,11 @@ import {
   CheckIcon,
   EyeIcon,
   EyeOffIcon,
+  Loader2Icon,
   XIcon,
 } from "lucide-react"
 
-import type { OrgUser, UserRole } from "@/types/configuracion"
+import type { AuthRole, AuthUser } from "@/types/usuarios"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -17,29 +18,22 @@ import { Input } from "@/components/ui/input"
 
 export interface UserDialogResult {
   email: string
-  username: string
   password: string
-  roles: string[]
-  name: string
+  displayName: string
+  roleIds: string[]
 }
 
 interface UserDialogProps {
   mode: "create" | "edit"
-  initial?: OrgUser
-  /** Catálogo de roles asignables (en producción, de Auth). */
-  availableRoles: UserRole[]
+  initial?: AuthUser
+  /** Catálogo de roles asignables (de Auth). */
+  availableRoles: AuthRole[]
+  /** La mutación está en vuelo: bloquea los controles del diálogo. */
+  submitting?: boolean
   onClose: () => void
   onSubmit: (data: UserDialogResult) => void
 }
 
-const titleCase = (s: string) =>
-  s
-    .split(/[._\-\s]+/)
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(" ")
-const deriveUser = (email: string) =>
-  (email.split("@")[0] || "").toLowerCase().replace(/[^a-z0-9._-]/g, "")
 const genPassword = () => {
   const c = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789@#%"
   return Array.from(
@@ -50,14 +44,20 @@ const genPassword = () => {
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)
 
 /** Alta/edición de usuario en dos pasos: ① Datos → ② Roles. */
-export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }: UserDialogProps) {
+export function UserDialog({
+  mode,
+  initial,
+  availableRoles,
+  submitting = false,
+  onClose,
+  onSubmit,
+}: UserDialogProps) {
   const [step, setStep] = useState<1 | 2>(1)
   const [email, setEmail] = useState(initial?.email ?? "")
   const [password, setPassword] = useState("")
   const [showPw, setShowPw] = useState(false)
-  const [username, setUsername] = useState(initial?.username ?? "")
-  const [touched, setTouched] = useState(!!initial)
-  const [roles, setRoles] = useState<string[]>(initial ? [...initial.roles] : [])
+  const [displayName, setDisplayName] = useState(initial?.displayName ?? "")
+  const [roleIds, setRoleIds] = useState<string[]>(initial ? [...initial.roleIds] : [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -67,23 +67,18 @@ export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }:
     return () => window.removeEventListener("keydown", onKey)
   }, [onClose])
 
-  const onEmail = (v: string) => {
-    setEmail(v)
-    if (!touched) setUsername(deriveUser(v))
-  }
   const step1Valid =
-    emailOk(email) && username.trim() !== "" && (mode === "edit" || password.length >= 8)
-  const step2Valid = roles.length >= 1
+    displayName.trim() !== "" &&
+    (mode === "edit" || (emailOk(email) && password.length >= 8))
   const toggleRole = (id: string) =>
-    setRoles((rs) => (rs.includes(id) ? rs.filter((r) => r !== id) : [...rs, id]))
+    setRoleIds((rs) => (rs.includes(id) ? rs.filter((r) => r !== id) : [...rs, id]))
 
   const submit = () =>
     onSubmit({
       email: email.trim(),
-      username: username.trim(),
       password,
-      roles,
-      name: initial?.name ?? titleCase(username || deriveUser(email)),
+      displayName: displayName.trim(),
+      roleIds,
     })
 
   return (
@@ -166,69 +161,65 @@ export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }:
                   id="f-email"
                   type="email"
                   value={email}
+                  disabled={mode === "edit"}
                   placeholder="nombre@colegioandes.cl"
-                  onChange={(e) => onEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
                 <FieldDescription>
                   {mode === "edit"
-                    ? "Cambiarlo actualizará el acceso del usuario."
-                    : "Se usará para iniciar sesión y recibir la invitación."}
+                    ? "El correo de acceso no se puede cambiar."
+                    : "Se usará para iniciar sesión."}
                 </FieldDescription>
               </Field>
+              {mode === "create" && (
+                <Field>
+                  <FieldLabel htmlFor="f-pw">Contraseña</FieldLabel>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="f-pw"
+                      type={showPw ? "text" : "password"}
+                      value={password}
+                      placeholder="••••••••"
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw((v) => !v)}
+                      aria-label={showPw ? "Ocultar" : "Mostrar"}
+                      className="grid size-8 flex-none place-items-center rounded-md border border-border bg-background text-muted transition-colors outline-none hover:text-foreground"
+                    >
+                      {showPw ? (
+                        <EyeOffIcon className="size-4" />
+                      ) : (
+                        <EyeIcon className="size-4" />
+                      )}
+                    </button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPassword(genPassword())
+                        setShowPw(true)
+                      }}
+                    >
+                      Generar
+                    </Button>
+                  </div>
+                  <FieldDescription>Mínimo 8 caracteres.</FieldDescription>
+                </Field>
+              )}
               <Field>
-                <FieldLabel htmlFor="f-pw">
-                  {mode === "edit" ? "Nueva contraseña" : "Contraseña"}
-                </FieldLabel>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="f-pw"
-                    type={showPw ? "text" : "password"}
-                    value={password}
-                    placeholder="••••••••"
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw((v) => !v)}
-                    aria-label={showPw ? "Ocultar" : "Mostrar"}
-                    className="grid size-8 flex-none place-items-center rounded-md border border-border bg-background text-muted transition-colors outline-none hover:text-foreground"
-                  >
-                    {showPw ? (
-                      <EyeOffIcon className="size-4" />
-                    ) : (
-                      <EyeIcon className="size-4" />
-                    )}
-                  </button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPassword(genPassword())
-                      setShowPw(true)
-                    }}
-                  >
-                    Generar
-                  </Button>
-                </div>
-                <FieldDescription>
-                  {mode === "edit"
-                    ? "Déjala en blanco para mantener la actual."
-                    : "Mínimo 8 caracteres."}
-                </FieldDescription>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="f-user">Nombre de usuario</FieldLabel>
+                <FieldLabel htmlFor="f-name">Nombre visible</FieldLabel>
                 <Input
-                  id="f-user"
-                  value={username}
-                  onChange={(e) => {
-                    setTouched(true)
-                    setUsername(e.target.value)
-                  }}
+                  id="f-name"
+                  value={displayName}
+                  maxLength={30}
+                  placeholder="Juan Pérez"
+                  onChange={(e) => setDisplayName(e.target.value)}
                 />
                 <FieldDescription>
-                  Propuesto desde el correo. Puedes editarlo.
+                  Cómo aparecerá en la plataforma (máx. 30 caracteres).
                 </FieldDescription>
               </Field>
             </div>
@@ -238,8 +229,13 @@ export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }:
                 Selecciona uno o más roles. Definen lo que el usuario puede ver y
                 hacer.
               </div>
+              {availableRoles.length === 0 && (
+                <div className="rounded-lg border border-border bg-surface px-3.5 py-3 text-[12.5px] text-muted">
+                  No hay roles disponibles todavía.
+                </div>
+              )}
               {availableRoles.map((r) => {
-                const on = roles.includes(r.id)
+                const on = roleIds.includes(r.id)
                 return (
                   <button
                     key={r.id}
@@ -254,8 +250,12 @@ export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }:
                   >
                     <Checkbox checked={on} className="pointer-events-none mt-0.5" />
                     <span className="flex flex-col gap-0.5">
-                      <span className="text-[13.5px] font-semibold">{r.label}</span>
-                      <span className="text-xs leading-snug text-muted">{r.desc}</span>
+                      <span className="text-[13.5px] font-semibold">{r.name}</span>
+                      {r.description && (
+                        <span className="text-xs leading-snug text-muted">
+                          {r.description}
+                        </span>
+                      )}
                     </span>
                   </button>
                 )
@@ -277,7 +277,8 @@ export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }:
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="inline-flex items-center gap-1 px-1 py-1.5 text-[13px] font-semibold text-muted transition-colors outline-none hover:text-foreground"
+              disabled={submitting}
+              className="inline-flex items-center gap-1 px-1 py-1.5 text-[13px] font-semibold text-muted transition-colors outline-none hover:text-foreground disabled:opacity-50"
             >
               <ArrowLeftIcon className="size-[15px]" /> Atrás
             </button>
@@ -285,8 +286,8 @@ export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }:
           <div className="flex items-center gap-3">
             {step === 2 && (
               <span className="text-xs text-muted">
-                {roles.length} {roles.length === 1 ? "rol" : "roles"} seleccionado
-                {roles.length === 1 ? "" : "s"}
+                {roleIds.length} {roleIds.length === 1 ? "rol" : "roles"} seleccionado
+                {roleIds.length === 1 ? "" : "s"}
               </span>
             )}
             {step === 1 ? (
@@ -294,8 +295,13 @@ export function UserDialog({ mode, initial, availableRoles, onClose, onSubmit }:
                 Continuar <ArrowRightIcon />
               </Button>
             ) : (
-              <Button disabled={!step2Valid} onClick={submit}>
-                <CheckIcon /> {mode === "edit" ? "Guardar cambios" : "Crear usuario"}
+              <Button disabled={submitting} onClick={submit}>
+                {submitting ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <CheckIcon />
+                )}
+                {mode === "edit" ? "Guardar cambios" : "Crear usuario"}
               </Button>
             )}
           </div>
