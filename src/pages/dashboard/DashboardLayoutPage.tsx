@@ -1,18 +1,46 @@
+import { useEffect, useState } from "react"
+
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { currentUserStub, dashboardStub } from "@/data/dashboard-stub"
+import { dashboardStub } from "@/data/dashboard-stub"
+import { useAuth } from "@/context/AuthContext"
+import { listCourses } from "@/api/estudiantes"
+import type { Course } from "@/types/dashboard"
 
 /**
- * Container del cascarón del dashboard (ruta `/dashboard`). Inyecta los datos
- * stub del shell —cursos, notificaciones e identidad— que en producción vendrán
- * de MS-Course y del JWT vía hooks contenedores. El `<DashboardLayout>` sigue
- * siendo el shell visual con `<Outlet>` para las rutas hijas.
+ * Container del cascarón del dashboard (ruta `/dashboard`). Carga los cursos
+ * del usuario desde MS-Course vía BFF (con los UUIDs reales que el resto del
+ * dashboard necesita), e inyecta la identidad desde el contexto de autenticación.
+ * Mientras carga, usa el stub como placeholder para no bloquear el render.
  */
 export function DashboardLayoutPage() {
+  const { user } = useAuth()
+  const [courses, setCourses] = useState<Course[]>(dashboardStub.courses)
+
+  useEffect(() => {
+    listCourses().then((res) => {
+      if (!res.ok) return
+      const mapped: Course[] = res.value.map((c) => ({
+        id: c.id,
+        name: c.name,
+        role: "Docente",
+        students: 0,
+        avg: 0,
+        attendance: 0,
+      }))
+      if (mapped.length > 0) setCourses(mapped)
+    })
+  }, [])
+
+  const currentUser = {
+    name: user?.displayName ?? "…",
+    role: user?.email ?? "",
+  }
+
   return (
     <DashboardLayout
-      courses={dashboardStub.courses}
+      courses={courses}
       notifications={dashboardStub.notifications}
-      user={currentUserStub}
+      user={currentUser}
     />
   )
 }
