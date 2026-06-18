@@ -22,15 +22,19 @@ interface CourseDialogProps {
   initial?: Course
   onClose: () => void
   onSubmit: (data: CourseForm) => void
+  loading?: boolean
+  error?: string | null
 }
 
 const req = <span className="text-danger">*</span>
 
 /** Alta/edición de curso. El nombre se autosugiere desde nivel + sección. */
-export function CourseDialog({ mode, initial, onClose, onSubmit }: CourseDialogProps) {
-  const [name, setName] = useState(initial?.name ?? "")
-  const [level, setLevel] = useState(initial?.level ?? "1° Medio")
-  const [section, setSection] = useState(initial?.section ?? "A")
+export function CourseDialog({ mode, initial, onClose, onSubmit, loading, error }: CourseDialogProps) {
+  const defaultLevel = initial?.level ?? "1° Medio"
+  const defaultSection = initial?.section ?? "A"
+  const [name, setName] = useState(initial?.name ?? `${defaultLevel} ${defaultSection}`.trim())
+  const [level, setLevel] = useState(defaultLevel)
+  const [section, setSection] = useState(defaultSection)
   const [academicYear, setYear] = useState(initial?.academicYear ?? 2026)
   const [description, setDesc] = useState(initial?.description ?? "")
   const [touchedName, setTouched] = useState(!!initial)
@@ -158,9 +162,12 @@ export function CourseDialog({ mode, initial, onClose, onSubmit }: CourseDialogP
         >
           Cancelar
         </button>
-        <Button onClick={submit}>
-          <CheckIcon /> {mode === "edit" ? "Guardar cambios" : "Crear curso"}
-        </Button>
+        <div className="flex items-center gap-3">
+          {error && <span className="text-[12.5px] text-danger">{error}</span>}
+          <Button disabled={loading} onClick={submit}>
+            <CheckIcon /> {mode === "edit" ? "Guardar cambios" : "Crear curso"}
+          </Button>
+        </div>
       </div>
     </ModalShell>
   )

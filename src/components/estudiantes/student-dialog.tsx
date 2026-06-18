@@ -40,6 +40,8 @@ interface StudentDialogProps {
   courses: Course[]
   onClose: () => void
   onSubmit: (data: StudentForm) => void
+  loading?: boolean
+  error?: string | null
 }
 
 const blankGuardian = (): Guardian => ({
@@ -54,7 +56,7 @@ const STEPS = ["Datos del alumno", "Apoderados", "Curso"]
 const req = <span className="text-danger">*</span>
 
 /** Alta/edición de alumno en 3 pasos: Datos → Apoderados → Curso. */
-export function StudentDialog({ mode, initial, courses, onClose, onSubmit }: StudentDialogProps) {
+export function StudentDialog({ mode, initial, courses, onClose, onSubmit, loading, error }: StudentDialogProps) {
   const [step, setStep] = useState(1)
   const [rut, setRut] = useState(initial?.rut ?? "")
   const [firstName, setFirstName] = useState(initial?.firstName ?? "")
@@ -408,15 +410,20 @@ export function StudentDialog({ mode, initial, courses, onClose, onSubmit }: Stu
             <ArrowLeftIcon className="size-[15px]" /> Atrás
           </button>
         )}
-        {step < 3 ? (
-          <Button onClick={next}>
-            Continuar <ArrowRightIcon />
-          </Button>
-        ) : (
-          <Button onClick={submit}>
-            <CheckIcon /> {mode === "edit" ? "Guardar cambios" : "Matricular alumno"}
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {error && step === 3 && (
+            <span className="text-[12.5px] text-danger">{error}</span>
+          )}
+          {step < 3 ? (
+            <Button onClick={next}>
+              Continuar <ArrowRightIcon />
+            </Button>
+          ) : (
+            <Button disabled={loading} onClick={submit}>
+              <CheckIcon /> {mode === "edit" ? "Guardar cambios" : "Matricular alumno"}
+            </Button>
+          )}
+        </div>
       </div>
     </ModalShell>
   )

@@ -13,10 +13,12 @@ interface TransferDialogProps {
   courses: Course[]
   onClose: () => void
   onSubmit: (destId: string) => void
+  loading?: boolean
+  error?: string | null
 }
 
 /** Traslado de un alumno a otro curso activo (→ estado TRANSFERRED). */
-export function TransferDialog({ student, courses, onClose, onSubmit }: TransferDialogProps) {
+export function TransferDialog({ student, courses, onClose, onSubmit, loading, error }: TransferDialogProps) {
   const [dest, setDest] = useState("")
   const options = courses.filter((c) => c.status === "ACTIVE" && c.id !== student.courseId)
 
@@ -73,9 +75,12 @@ export function TransferDialog({ student, courses, onClose, onSubmit }: Transfer
         >
           Cancelar
         </button>
-        <Button disabled={!dest} onClick={() => onSubmit(dest)}>
-          <ArrowRightLeftIcon /> Trasladar
-        </Button>
+        <div className="flex items-center gap-3">
+          {error && <span className="text-[12.5px] text-danger">{error}</span>}
+          <Button disabled={!dest || loading} onClick={() => onSubmit(dest)}>
+            <ArrowRightLeftIcon /> Trasladar
+          </Button>
+        </div>
       </div>
     </ModalShell>
   )

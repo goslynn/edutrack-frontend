@@ -36,7 +36,10 @@ interface StudentsPanelProps {
   students: Student[]
   courses: Course[]
   perms: PermMap
-  onChange: (updater: (prev: Student[]) => Student[]) => void
+  onCreate: (data: StudentForm) => Promise<string | null>
+  onUpdate: (id: string, data: StudentForm) => Promise<string | null>
+  onTransfer: (studentId: string, destCourseId: string) => Promise<string | null>
+  onDelete: (student: Student) => Promise<string | null>
   flash: Flash
   courseFilter: string
   setCourseFilter: (id: string) => void
@@ -49,7 +52,10 @@ export function StudentsPanel({
   students,
   courses,
   perms,
-  onChange,
+  onCreate,
+  onUpdate,
+  onTransfer,
+  onDelete,
   flash,
   courseFilter,
   setCourseFilter,
@@ -59,6 +65,8 @@ export function StudentsPanel({
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [transfer, setTransfer] = useState<Student | null>(null)
   const [del, setDel] = useState<Student | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [mutationError, setMutationError] = useState<string | null>(null)
 
   const filtered = students.filter((s) => {
     const t = (
@@ -77,33 +85,58 @@ export function StudentsPanel({
     return true
   })
 
-  const onSubmit = (data: StudentForm) => {
-    if (dialog?.mode === "edit" && dialog.initial) {
-      const id = dialog.initial.id
-      onChange((ss) =>
-        ss.map((s) => (s.id === id ? { ...s, ...data, courseId: s.courseId } : s))
-      )
-      flash("success", "Cambios guardados.")
-    } else {
-      const ns: Student = { id: "s" + Date.now(), status: "ACTIVE", ...data }
-      onChange((ss) => [ns, ...ss])
-      flash("success", `${data.firstName} ${data.lastName} fue matriculado en ${courseName(courses, data.courseId)}.`)
+  const clearMutation = () => setMutationError(null)
+
+  const handleSubmit = async (data: StudentForm) => {
+    setSubmitting(true)
+    clearMutation()
+    const err =
+      dialog?.mode === "edit" && dialog.initial
+        ? await onUpdate(dialog.initial.id, data)
+        : await onCreate(data)
+    setSubmitting(false)
+    if (err) {
+      setMutationError(err)
+      return
     }
-    setDialog(null)
-  }
-  const onTransfer = (destId: string) => {
-    if (!transfer) return
-    onChange((ss) =>
-      ss.map((s) => (s.id === transfer.id ? { ...s, courseId: destId, status: "TRANSFERRED" } : s))
+    flash(
+      "success",
+      dialog?.mode === "edit"
+        ? "Cambios guardados."
+        : `${data.firstName} ${data.lastName} fue matriculado en ${courseName(courses, data.courseId)}.`,
     )
+    setDialog(null)
+    clearMutation()
+  }
+
+  const handleTransfer = async (destId: string) => {
+    if (!transfer) return
+    setSubmitting(true)
+    clearMutation()
+    const err = await onTransfer(transfer.id, destId)
+    setSubmitting(false)
+    if (err) {
+      setMutationError(err)
+      return
+    }
     flash("success", `${transfer.firstName} fue trasladado a ${courseName(courses, destId)}.`)
     setTransfer(null)
+    clearMutation()
   }
-  const onDelete = () => {
+
+  const handleDelete = async () => {
     if (!del) return
-    onChange((ss) => ss.map((s) => (s.id === del.id ? { ...s, status: "DELETED" } : s)))
+    setSubmitting(true)
+    clearMutation()
+    const err = await onDelete(del)
+    setSubmitting(false)
+    if (err) {
+      setMutationError(err)
+      return
+    }
     flash("success", `${del.firstName} ${del.lastName} fue eliminado.`)
     setDel(null)
+    clearMutation()
   }
 
   const activos = students.filter((s) => s.status === "ACTIVE").length
@@ -113,9 +146,9 @@ export function StudentsPanel({
     const canTransfer = STUDENT_TRANSITIONS[s.status].includes("TRANSFERRED")
     const canDelete = STUDENT_TRANSITIONS[s.status].includes("DELETED")
     return [
-      { icon: PencilIcon, label: "Editar", state: perms["students.edit"], onClick: () => setDialog({ mode: "edit", initial: s }) },
-      { icon: ArrowRightLeftIcon, label: "Trasladar de curso", state: canTransfer ? perms["students.transfer"] : "hidden", onClick: () => setTransfer(s) },
-      { icon: Trash2Icon, label: "Eliminar", danger: true, state: canDelete ? perms["students.delete"] : "hidden", onClick: () => setDel(s) },
+      { icon: PencilIcon, label: "Editar", state: perms["students.edit"], onClick: () => { clearMutation(); setDialog({ mode: "edit", initial: s }) } },
+      { icon: ArrowRightLeftIcon, label: "Trasladar de curso", state: canTransfer ? perms["students.transfer"] : "hidden", onClick: () => { clearMutation(); setTransfer(s) } },
+      { icon: Trash2Icon, label: "Eliminar", danger: true, state: canDelete ? perms["students.delete"] : "hidden", onClick: () => { clearMutation(); setDel(s) } },
     ]
   }
 
@@ -126,7 +159,7 @@ export function StudentsPanel({
           {activos} alumnos activos · {activeCourses.length} cursos
         </p>
         {perms["students.create"] !== "hidden" && (
-          <Button disabled={perms["students.create"] === "disabled"} onClick={() => setDialog({ mode: "create" })}>
+          <Button disabled={perms["students.create"] === "disabled"} onClick={() => { clearMutation(); setDialog({ mode: "create" }) }}>
             <UserPlusIcon /> Nuevo alumno
           </Button>
         )}
@@ -240,16 +273,20 @@ export function StudentsPanel({
           mode={dialog.mode}
           initial={dialog.initial}
           courses={courses}
-          onClose={() => setDialog(null)}
-          onSubmit={onSubmit}
+          onClose={() => { setDialog(null); clearMutation() }}
+          onSubmit={handleSubmit}
+          loading={submitting}
+          error={mutationError}
         />
       )}
       {transfer && (
         <TransferDialog
           student={transfer}
           courses={courses}
-          onClose={() => setTransfer(null)}
-          onSubmit={onTransfer}
+          onClose={() => { setTransfer(null); clearMutation() }}
+          onSubmit={handleTransfer}
+          loading={submitting}
+          error={mutationError}
         />
       )}
       {del && (
@@ -257,8 +294,10 @@ export function StudentsPanel({
           title={`¿Eliminar a ${del.firstName} ${del.lastName}?`}
           description="El alumno se marca como eliminado (borrado lógico). Conserva su historial pero deja de aparecer en los listados activos. Esta acción es terminal."
           confirmLabel="Eliminar"
-          onClose={() => setDel(null)}
-          onConfirm={onDelete}
+          onClose={() => { setDel(null); clearMutation() }}
+          onConfirm={handleDelete}
+          loading={submitting}
+          error={mutationError}
         />
       )}
     </div>

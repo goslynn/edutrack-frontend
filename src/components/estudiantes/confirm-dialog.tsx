@@ -10,6 +10,8 @@ interface ConfirmDialogProps {
   confirmLabel: string
   /** Bloquea la acción (p. ej. un curso con alumnos activos). */
   disabled?: boolean
+  loading?: boolean
+  error?: string | null
   onClose: () => void
   onConfirm: () => void
 }
@@ -20,6 +22,8 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   disabled,
+  loading,
+  error,
   onClose,
   onConfirm,
 }: ConfirmDialogProps) {
@@ -34,6 +38,9 @@ export function ConfirmDialog({
           {description}
         </div>
       </div>
+      {error && (
+        <p className="px-[22px] pb-1 text-center text-[12.5px] text-danger">{error}</p>
+      )}
       <div className="flex items-center justify-center gap-4 border-t border-border px-[22px] pt-3.5 pb-[18px]">
         <button
           type="button"
@@ -42,7 +49,7 @@ export function ConfirmDialog({
         >
           Cancelar
         </button>
-        <Button variant="destructive" disabled={disabled} onClick={onConfirm}>
+        <Button variant="destructive" disabled={disabled || loading} onClick={onConfirm}>
           <Trash2Icon /> {confirmLabel}
         </Button>
       </div>

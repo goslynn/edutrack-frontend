@@ -1,10 +1,45 @@
 import { EstudiantesScreen } from "@/components/estudiantes/estudiantes-screen"
-import { courses, perms, students } from "@/data/estudiantes-stub"
+import { useEstudiantes } from "@/hooks/useEstudiantes"
 
 /**
- * Sección Estudiantes y cursos (`/dashboard/estudiantes`). Container: inyecta los
- * datos stub que en producción vendrán de MS-Student / MS-Course y de la sesión.
+ * Sección Estudiantes y cursos (`/dashboard/estudiantes`).
+ * Cablea el hook de feature (`useEstudiantes` → BFF → MS-Student / MS-Course)
+ * a la capa visual (`EstudiantesScreen`), que es puramente presentacional.
  */
 export function EstudiantesPage() {
-  return <EstudiantesScreen students={students} courses={courses} perms={perms} />
+  const {
+    students,
+    courses,
+    loading,
+    error,
+    perms,
+    createStudent,
+    updateStudent,
+    deleteStudent,
+    transferStudent,
+    createCourse,
+    updateCourse,
+    deleteCourse,
+  } = useEstudiantes()
+
+  return (
+    <EstudiantesScreen
+      students={students}
+      courses={courses}
+      perms={perms}
+      loading={loading}
+      error={error}
+      onStudents={{
+        create: createStudent,
+        update: updateStudent,
+        transfer: transferStudent,
+        delete: deleteStudent,
+      }}
+      onCourses={{
+        create: createCourse,
+        update: updateCourse,
+        delete: deleteCourse,
+      }}
+    />
+  )
 }

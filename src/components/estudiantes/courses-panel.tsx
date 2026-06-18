@@ -24,7 +24,9 @@ interface CoursesPanelProps {
   courses: Course[]
   students: Student[]
   perms: PermMap
-  onChange: (updater: (prev: Course[]) => Course[]) => void
+  onCreate: (data: CourseForm) => Promise<string | null>
+  onUpdate: (id: string, data: CourseForm) => Promise<string | null>
+  onDelete: (course: Course) => Promise<string | null>
   flash: Flash
   onViewStudents: (courseId: string) => void
 }
@@ -36,7 +38,9 @@ export function CoursesPanel({
   courses,
   students,
   perms,
-  onChange,
+  onCreate,
+  onUpdate,
+  onDelete,
   flash,
   onViewStudents,
 }: CoursesPanelProps) {
@@ -45,6 +49,8 @@ export function CoursesPanel({
   const [statusF, setStatusF] = useState("ACTIVE")
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [del, setDel] = useState<Course | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [mutationError, setMutationError] = useState<string | null>(null)
 
   const countActive = (cid: string) =>
     students.filter((s) => s.courseId === cid && s.status !== "DELETED").length
@@ -57,23 +63,38 @@ export function CoursesPanel({
     return true
   })
 
-  const onSubmit = (data: CourseForm) => {
-    if (dialog?.mode === "edit" && dialog.initial) {
-      const id = dialog.initial.id
-      onChange((cs) => cs.map((c) => (c.id === id ? { ...c, ...data } : c)))
-      flash("success", "Curso actualizado.")
-    } else {
-      const nc: Course = { id: "c" + Date.now(), status: "ACTIVE", ...data }
-      onChange((cs) => [nc, ...cs])
-      flash("success", `${data.name} fue creado.`)
+  const clearMutation = () => setMutationError(null)
+
+  const handleSubmit = async (data: CourseForm) => {
+    setSubmitting(true)
+    clearMutation()
+    const err =
+      dialog?.mode === "edit" && dialog.initial
+        ? await onUpdate(dialog.initial.id, data)
+        : await onCreate(data)
+    setSubmitting(false)
+    if (err) {
+      setMutationError(err)
+      return
     }
+    flash("success", dialog?.mode === "edit" ? "Curso actualizado." : `${data.name} fue creado.`)
     setDialog(null)
+    clearMutation()
   }
-  const onDelete = () => {
+
+  const handleDelete = async () => {
     if (!del) return
-    onChange((cs) => cs.map((c) => (c.id === del.id ? { ...c, status: "DELETED" } : c)))
+    setSubmitting(true)
+    clearMutation()
+    const err = await onDelete(del)
+    setSubmitting(false)
+    if (err) {
+      setMutationError(err)
+      return
+    }
     flash("success", `${del.name} fue eliminado.`)
     setDel(null)
+    clearMutation()
   }
 
   const years = Array.from(new Set(courses.map((c) => c.academicYear))).sort((a, b) => b - a)
@@ -81,8 +102,8 @@ export function CoursesPanel({
 
   const rowMenu = (c: Course): MenuItem[] => [
     { icon: UsersIcon, label: "Ver estudiantes", state: "enabled", onClick: () => onViewStudents(c.id) },
-    { icon: PencilIcon, label: "Editar", state: c.status === "DELETED" ? "hidden" : perms["courses.edit"], onClick: () => setDialog({ mode: "edit", initial: c }) },
-    { icon: Trash2Icon, label: "Eliminar", danger: true, state: c.status === "DELETED" ? "hidden" : perms["courses.delete"], onClick: () => setDel(c) },
+    { icon: PencilIcon, label: "Editar", state: c.status === "DELETED" ? "hidden" : perms["courses.edit"], onClick: () => { clearMutation(); setDialog({ mode: "edit", initial: c }) } },
+    { icon: Trash2Icon, label: "Eliminar", danger: true, state: c.status === "DELETED" ? "hidden" : perms["courses.delete"], onClick: () => { clearMutation(); setDel(c) } },
   ]
 
   return (
@@ -92,7 +113,7 @@ export function CoursesPanel({
           {activos} cursos activos · {students.filter((s) => s.status !== "DELETED").length} alumnos matriculados
         </p>
         {perms["courses.create"] !== "hidden" && (
-          <Button disabled={perms["courses.create"] === "disabled"} onClick={() => setDialog({ mode: "create" })}>
+          <Button disabled={perms["courses.create"] === "disabled"} onClick={() => { clearMutation(); setDialog({ mode: "create" }) }}>
             <PlusIcon /> Nuevo curso
           </Button>
         )}
@@ -201,8 +222,10 @@ export function CoursesPanel({
         <CourseDialog
           mode={dialog.mode}
           initial={dialog.initial}
-          onClose={() => setDialog(null)}
-          onSubmit={onSubmit}
+          onClose={() => { setDialog(null); clearMutation() }}
+          onSubmit={handleSubmit}
+          loading={submitting}
+          error={mutationError}
         />
       )}
       {del && (
@@ -215,8 +238,10 @@ export function CoursesPanel({
           }
           confirmLabel="Eliminar curso"
           disabled={countActive(del.id) > 0}
-          onClose={() => setDel(null)}
-          onConfirm={onDelete}
+          onClose={() => { setDel(null); clearMutation() }}
+          onConfirm={handleDelete}
+          loading={submitting}
+          error={mutationError}
         />
       )}
     </div>

@@ -1,6 +1,8 @@
 import { useRef, useState } from "react"
 
 import type { Course, PermMap, Student } from "@/types/estudiantes"
+import type { StudentForm } from "./student-dialog"
+import type { CourseForm } from "./course-dialog"
 import { Alert } from "@/components/ui/alert"
 import { Tabs } from "@/components/ui/tabs"
 import { StudentsPanel } from "./students-panel"
@@ -8,31 +10,43 @@ import { CoursesPanel } from "./courses-panel"
 
 type Toast = { variant: "success" | "info"; msg: string; k: number } | null
 
+export interface StudentMutations {
+  create: (data: StudentForm) => Promise<string | null>
+  update: (id: string, data: StudentForm) => Promise<string | null>
+  transfer: (studentId: string, destCourseId: string) => Promise<string | null>
+  delete: (student: Student) => Promise<string | null>
+}
+
+export interface CourseMutations {
+  create: (data: CourseForm) => Promise<string | null>
+  update: (id: string, data: CourseForm) => Promise<string | null>
+  delete: (course: Course) => Promise<string | null>
+}
+
 interface EstudiantesScreenProps {
-  /** Alumnos semilla (en producción, de MS-Student). */
   students: Student[]
-  /** Cursos semilla (en producción, de MS-Course). */
   courses: Course[]
-  /** Permisos RBAC del usuario en sesión (única expresión de autorización). */
   perms: PermMap
+  loading?: boolean
+  error?: string | null
+  onStudents: StudentMutations
+  onCourses: CourseMutations
 }
 
 /**
- * Contenedor de «Estudiantes y cursos»: dos pestañas (Estudiantes · Cursos)
- * sobre el mismo conjunto de datos, con CRUD y la relación entre ambos
- * (matricular / trasladar). Las mutaciones solo afectan estado local de UI; en
- * producción invocan MS-Student / MS-Course vía hooks contenedores. El mapa de
- * permisos (RBAC) lo aporta la sesión y es la única expresión de autorización.
+ * Shell de «Estudiantes y cursos»: dos pestañas sobre los mismos datos.
+ * El estado de dominio (students/courses) viene del hook vía la página;
+ * el estado UI (tab, filtros, toasts) vive aquí.
  */
 export function EstudiantesScreen({
-  students: seedStudents,
-  courses: seedCourses,
+  students,
+  courses,
   perms,
+  loading,
+  error,
+  onStudents,
+  onCourses,
 }: EstudiantesScreenProps) {
-  const [students, setStudents] = useState<Student[]>(() =>
-    seedStudents.map((s) => ({ ...s, guardians: s.guardians.map((g) => ({ ...g })) }))
-  )
-  const [courses, setCourses] = useState<Course[]>(() => seedCourses.map((c) => ({ ...c })))
   const [tab, setTab] = useState("estudiantes")
   const [courseFilter, setCourseFilter] = useState("all")
   const [toast, setToast] = useState<Toast>(null)
@@ -73,18 +87,31 @@ export function EstudiantesScreen({
         <Tabs tabs={tabs} value={tab} onValueChange={setTab} />
       </div>
 
+      {error && (
+        <div className="mb-3.5">
+          <Alert variant="danger">{error}</Alert>
+        </div>
+      )}
+
       {toast && (
         <div className="mb-3.5" key={toast.k}>
           <Alert variant={toast.variant}>{toast.msg}</Alert>
         </div>
       )}
 
-      {tab === "estudiantes" ? (
+      {loading && !students.length && !courses.length ? (
+        <div className="flex items-center justify-center py-20 text-[13.5px] text-muted">
+          Cargando…
+        </div>
+      ) : tab === "estudiantes" ? (
         <StudentsPanel
           students={students}
           courses={courses}
           perms={perms}
-          onChange={setStudents}
+          onCreate={onStudents.create}
+          onUpdate={onStudents.update}
+          onTransfer={onStudents.transfer}
+          onDelete={onStudents.delete}
           flash={flash}
           courseFilter={courseFilter}
           setCourseFilter={setCourseFilter}
@@ -94,7 +121,9 @@ export function EstudiantesScreen({
           courses={courses}
           students={students}
           perms={perms}
-          onChange={setCourses}
+          onCreate={onCourses.create}
+          onUpdate={onCourses.update}
+          onDelete={onCourses.delete}
           flash={flash}
           onViewStudents={onViewStudents}
         />
