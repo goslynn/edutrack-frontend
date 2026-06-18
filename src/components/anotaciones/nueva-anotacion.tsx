@@ -9,7 +9,6 @@ import {
 } from "lucide-react"
 
 import type {
-  Annotation,
   AnnotationType,
   RosterStudent,
   Teacher,
@@ -20,13 +19,25 @@ import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { MAX_CONTENT } from "./anno-meta"
 
+export interface AnnotationFormData {
+  studentId: string
+  type: AnnotationType
+  content: string
+  date: string
+}
+
 interface NuevaAnotacionProps {
   roster: RosterStudent[]
   /** Fecha por defecto / tope de la anotación (ISO). */
   today: string
   /** Docente autenticado que quedará como autor. */
   currentTeacher: Teacher
-  onSubmit: (a: Annotation) => void
+  /**
+   * Llamado al enviar el formulario con los campos validados.
+   * Debe lanzar un Error con el mensaje si el registro falla (p.ej. error de API).
+   * En modo stub puede ser síncrono (devuelve Promise.resolve()).
+   */
+  onSubmit: (data: AnnotationFormData) => Promise<void>
 }
 
 const reqMark = <span className="text-danger">*</span>
@@ -44,10 +55,11 @@ export function NuevaAnotacion({
   const [date, setDate] = useState(today)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const over = content.length > MAX_CONTENT
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setOk(null)
     // Reglas de dominio del Annotation MS, validadas en la UI.
@@ -56,28 +68,23 @@ export function NuevaAnotacion({
     if (!content.trim()) return setError("Escribe el texto de la anotación.")
     if (over) return setError("El texto supera los 1000 caracteres permitidos.")
     setError(null)
-
-    const student = roster.find((s) => s.id === studentId)
-    if (!student) return
-    onSubmit({
-      id: "new-" + Date.now(),
-      studentId,
-      student: student.name,
-      author: currentTeacher.name,
-      type,
-      content: content.trim(),
-      date,
-      guardianNotified: type === "NEGATIVE",
-    })
-    setOk(
-      type === "NEGATIVE"
-        ? "Anotación registrada — el apoderado será notificado."
-        : "Anotación registrada."
-    )
-    setContent("")
-    setType(null)
-    setStudentId("")
-    setDate(today)
+    setSaving(true)
+    try {
+      await onSubmit({ studentId, type, content: content.trim(), date })
+      setOk(
+        type === "NEGATIVE"
+          ? "Anotación registrada — el apoderado será notificado."
+          : "Anotación registrada."
+      )
+      setContent("")
+      setType(null)
+      setStudentId("")
+      setDate(today)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al registrar la anotación.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   const labelCls =
@@ -93,7 +100,7 @@ export function NuevaAnotacion({
         </span>
       </div>
 
-      <form onSubmit={submit} className="flex flex-col gap-[15px] px-[18px] pt-1 pb-[18px]">
+      <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-[15px] px-[18px] pt-1 pb-[18px]">
         {ok && (
           <Alert variant="success" title="Listo">
             {ok}
@@ -210,8 +217,8 @@ export function NuevaAnotacion({
           </div>
         )}
 
-        <Button type="submit">
-          <CheckIcon /> Registrar anotación
+        <Button type="submit" disabled={saving}>
+          <CheckIcon /> {saving ? "Registrando…" : "Registrar anotación"}
         </Button>
         <span className="inline-flex items-center gap-1.5 text-[11.5px] leading-snug text-muted">
           <ShieldCheckIcon className="size-[13px] flex-none" /> Quedará registrada a tu
