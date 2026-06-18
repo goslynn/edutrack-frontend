@@ -1,7 +1,9 @@
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useLogin } from '@/hooks/useLogin'
 import { ApiError } from '@/api/errors'
-import { saveSession } from '@/lib/session'
+import { saveSession, isAuthenticated, getCurrentUserId } from '@/lib/session'
+import { getUserById } from '@/api/auth'
+import { useAuth } from '@/context/AuthContext'
 import { LoginBrandPane } from '@/components/login-brand-pane'
 import { LoginForm, type LoginFormValues } from '@/components/login-form'
 
@@ -17,11 +19,19 @@ function loginErrorMessage(error: Error | null): string | null {
 export function LoginPage() {
   const navigate = useNavigate()
   const { execute, loading, error } = useLogin()
+  const { setUser } = useAuth()
+
+  if (isAuthenticated()) return <Navigate to="/dashboard" replace />
 
   const handleSubmit = async ({ email, password, remember }: LoginFormValues) => {
     const tokens = await execute({ email, password })
-    if (!tokens) return // el error queda en el estado de useLogin y se muestra en el formulario
+    if (!tokens) return
     saveSession(tokens, { remember })
+    const id = getCurrentUserId()
+    if (id) {
+      const result = await getUserById(id)
+      if (result.ok) setUser(result.value)
+    }
     navigate('/dashboard')
   }
 

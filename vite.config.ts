@@ -17,5 +17,11 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
+    proxy: {
+      // Forward all gateway-routed paths to avoid CORS in dev (pnpm dev runs
+      // on a different port than the gateway's CORS_ALLOW_ORIGIN).
+      '/auth': 'http://localhost:8080',
+      '/bff': 'http://localhost:8080',
+    },
   },
 })

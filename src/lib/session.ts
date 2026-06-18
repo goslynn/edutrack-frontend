@@ -49,6 +49,30 @@ export function isAuthenticated(): boolean {
   return getAccessToken() !== null
 }
 
+/** Decodifica el payload de un JWT (base64url) sin validar la firma. */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const part = token.split('.')[1]
+  if (!part) return null
+  try {
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'))
+    return JSON.parse(json) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Id del usuario autenticado (claim `sub` del access token), o `null` si no hay
+ * sesión o el token es ilegible. La firma la valida el Gateway; aquí solo se lee
+ * para UX (p. ej. marcar la fila "Tú" y evitar que se inhabilite a sí mismo).
+ */
+export function getCurrentUserId(): string | null {
+  const token = getAccessToken()
+  if (!token) return null
+  const sub = decodeJwtPayload(token)?.sub
+  return typeof sub === 'string' ? sub : null
+}
+
 /**
  * Lee la cookie de access token y la inyecta en el cliente HTTP. Es la función
  * que cablea cookie → cliente; se llama al arrancar la app (bootstrap) para

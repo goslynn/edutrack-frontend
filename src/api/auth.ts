@@ -7,6 +7,7 @@ import type { HttpTransport } from '@/api/http-transport'
 import type { HttpFailure } from '@/api/http-client'
 import type { ErrorResponse } from '@/api/errors'
 import type { Result } from '@/api/result'
+import type { AuthUser } from '@/types/usuarios'
 
 export interface LoginRequest {
   email: string
@@ -26,4 +27,12 @@ export function login(
   client: HttpTransport = api,
 ): Promise<AuthResult<LoginResponse>> {
   return client.post<LoginResponse, ErrorResponse>('/auth/login', credentials)
+}
+
+// GET /auth/users/:id — selfParam permite al usuario leer su propio perfil.
+export function getUserById(
+  id: string,
+  client: HttpTransport = api,
+): Promise<AuthResult<AuthUser>> {
+  return client.get<AuthUser, ErrorResponse>(`/auth/users/${id}`)
 }
