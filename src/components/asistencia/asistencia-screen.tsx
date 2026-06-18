@@ -33,6 +33,8 @@ interface Session {
   state: "open" | "registered"
   marks: Marks
   time: string | null
+  /** UUID de la sesión abierta en MS-Attendance. Presente cuando la API está cableada. */
+  apiId: string | null
 }
 
 interface AsistenciaScreenProps {
@@ -40,6 +42,20 @@ interface AsistenciaScreenProps {
   courseName: string
   /** Bundle de datos de la pantalla (en producción, de los MS vía hooks). */
   data: AsistenciaData
+  /** Indica que los datos están cargando (muestra estado de espera en el hero). */
+  loading?: boolean
+  /** Error de carga inicial. */
+  error?: string | null
+  /**
+   * Abre una sesión en MS-Attendance. Devuelve el sessionId o lanza un error.
+   * Si no se pasa, el flujo de apertura es solo local (modo stub).
+   */
+  onOpenSession?: () => Promise<string>
+  /**
+   * Cierra la sesión enviando los registros y haciendo PATCH /close.
+   * Devuelve `null` en éxito o el mensaje de error.
+   */
+  onCloseSession?: (sessionId: string, marks: Marks) => Promise<string | null>
 }
 
 const STORAGE_KEY = "et-asist-state-v1"
@@ -65,13 +81,22 @@ function loadState(): Persisted {
  * El cierre de sesión solo muta estado local de UI; en producción ese hito
  * invoca un servicio inyectado (la capa visual nunca llama HTTP).
  */
-export function AsistenciaScreen({ courseName, data }: AsistenciaScreenProps) {
+export function AsistenciaScreen({
+  courseName,
+  data,
+  loading,
+  error,
+  onOpenSession,
+  onCloseSession,
+}: AsistenciaScreenProps) {
   const saved = loadState()
   const [view, setView] = useState<"resumen" | "sesion">(
     saved.view === "sesion" ? "sesion" : "resumen"
   )
   const [session, setSession] = useState<Session | null>(saved.session ?? null)
   const [modal, setModal] = useState<null | "open" | "close" | "discard">(null)
+  const [saving, setSaving] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
   const [viewer, setViewer] = useState<RecordView | null>(null)
 
   const perms = data.perms
@@ -85,14 +110,35 @@ export function AsistenciaScreen({ courseName, data }: AsistenciaScreenProps) {
   }, [view, session])
 
   // ① INICIO — confirmar y abrir sesión (todos presentes)
-  const confirmOpen = () => {
-    setSession({ state: "open", marks: freshMarks(data.students), time: null })
-    setView("sesion")
-    setModal(null)
+  const confirmOpen = async () => {
+    setSaving(true)
+    setApiError(null)
+    try {
+      const apiId = onOpenSession ? await onOpenSession() : null
+      setSession({ state: "open", marks: freshMarks(data.students), time: null, apiId })
+      setView("sesion")
+      setModal(null)
+    } catch (e) {
+      setApiError(e instanceof Error ? e.message : "Error al abrir la sesión")
+    } finally {
+      setSaving(false)
+    }
   }
-  // ③ CIERRE — confirmar, registrar (inmutable)
-  const confirmClose = () => {
+  // ③ CIERRE — confirmar, enviar registros y cerrar sesión
+  const confirmClose = async () => {
+    if (!session) return
+    setSaving(true)
+    setApiError(null)
+    const errMsg = onCloseSession && session.apiId
+      ? await onCloseSession(session.apiId, session.marks)
+      : null
+    if (errMsg) {
+      setApiError(errMsg)
+      setSaving(false)
+      return
+    }
     setSession((s) => (s ? { ...s, state: "registered", time: nowTime() } : s))
+    setSaving(false)
     setModal(null)
   }
   // descartar sesión abierta
@@ -108,7 +154,19 @@ export function AsistenciaScreen({ courseName, data }: AsistenciaScreenProps) {
     setSession((s) => (s ? { ...s, marks: freshMarks(data.students) } : s))
 
   let body
-  if (view === "sesion" && session && session.state === "open") {
+  if (loading) {
+    body = (
+      <div className="flex h-64 items-center justify-center text-[13.5px] text-muted">
+        Cargando asistencia…
+      </div>
+    )
+  } else if (error) {
+    body = (
+      <div className="flex h-64 items-center justify-center text-[13.5px] text-danger">
+        {error}
+      </div>
+    )
+  } else if (view === "sesion" && session && session.state === "open") {
     body = (
       <AsistenciaSesion
         courseName={courseName}
@@ -156,18 +214,23 @@ export function AsistenciaScreen({ courseName, data }: AsistenciaScreenProps) {
           tone="primary"
           title="Iniciar toma de asistencia"
           sub={`${courseName} · ${data.today.dateLabel}`}
-          onClose={() => setModal(null)}
+          onClose={() => { setModal(null); setApiError(null) }}
           foot={
             <div className="flex items-center justify-end gap-2.5">
-              <Button variant="ghost" onClick={() => setModal(null)}>
+              <Button variant="ghost" onClick={() => { setModal(null); setApiError(null) }} disabled={saving}>
                 Cancelar
               </Button>
-              <Button onClick={confirmOpen}>
-                <PlayIcon /> Iniciar sesión
+              <Button onClick={() => void confirmOpen()} disabled={saving}>
+                <PlayIcon /> {saving ? "Abriendo…" : "Iniciar sesión"}
               </Button>
             </div>
           }
         >
+          {apiError && (
+            <p className="mb-3 rounded-md bg-danger/10 px-3 py-2 text-[12.5px] text-danger">
+              {apiError}
+            </p>
+          )}
           <p className="mb-3.5 text-[13.5px] leading-normal text-balance">
             Se abrirá una <b>sesión de asistencia</b> para esta clase. Todos los
             estudiantes parten como <b>presentes</b>; marcarás las novedades y
@@ -198,7 +261,7 @@ export function AsistenciaScreen({ courseName, data }: AsistenciaScreenProps) {
           tone="primary"
           title="Registrar asistencia del día"
           sub={`${courseName} · ${data.today.dateLabel}`}
-          onClose={() => setModal(null)}
+          onClose={() => { setModal(null); setApiError(null) }}
           foot={
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="inline-flex items-center gap-1.5 text-xs text-danger">
@@ -206,16 +269,21 @@ export function AsistenciaScreen({ courseName, data }: AsistenciaScreenProps) {
                 deshacer.
               </span>
               <span className="flex items-center gap-2.5">
-                <Button variant="ghost" onClick={() => setModal(null)}>
+                <Button variant="ghost" onClick={() => { setModal(null); setApiError(null) }} disabled={saving}>
                   Volver
                 </Button>
-                <Button onClick={confirmClose}>
-                  <SendIcon /> Registrar asistencia
+                <Button onClick={() => void confirmClose()} disabled={saving}>
+                  <SendIcon /> {saving ? "Guardando…" : "Registrar asistencia"}
                 </Button>
               </span>
             </div>
           }
         >
+          {apiError && (
+            <p className="mb-3 rounded-md bg-danger/10 px-3 py-2 text-[12.5px] text-danger">
+              {apiError}
+            </p>
+          )}
           <p className="mb-3 text-[13.5px] leading-normal text-balance">
             Vas a <b>cerrar la sesión</b> y enviar la asistencia al libro de clases.
             Una vez registrada, <b>no podrá modificarse</b> — solo consultarse.

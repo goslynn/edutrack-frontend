@@ -29,6 +29,8 @@ export interface Student {
   last: string
   name: string
   rut: string
+  /** UUID de MS-Student. Presente cuando los datos vienen de la API; ausente en el stub. */
+  id?: string
 }
 
 /** Sesión cerrada e inmutable, guardada como listas de excepción (resto = presente). */
