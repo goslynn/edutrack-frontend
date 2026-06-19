@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react"
 import {
   BellIcon,
   ChevronDownIcon,
-  CircleHelpIcon,
   LogOutIcon,
   SearchIcon,
   SettingsIcon,
@@ -102,13 +101,6 @@ export function DashboardTopbar({
           >
             <BellIcon className="size-[18px]" />
             <span className="absolute top-2 right-[9px] size-[7px] rounded-full bg-accent ring-2 ring-background" />
-          </button>
-          <button
-            type="button"
-            aria-label="Ayuda"
-            className="grid size-[34px] place-items-center rounded-md text-muted transition-colors outline-none hover:bg-surface hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <CircleHelpIcon className="size-[18px]" />
           </button>
           <div className="h-[22px] w-px bg-border" />
 

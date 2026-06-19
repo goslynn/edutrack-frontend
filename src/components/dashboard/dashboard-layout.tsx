@@ -64,16 +64,6 @@ export function DashboardLayout({
   const courseName =
     courses.find((c) => c.id === courseId)?.name ?? courses[0].name
 
-  // Cuando la lista de cursos se actualiza desde la API (IDs reales vs. stub),
-  // si el courseId guardado es un ID de stub (no UUID) y no existe en la nueva
-  // lista, cambia al primero. No se resetea si courseId ya es un UUID real.
-  useEffect(() => {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(courseId)
-    if (!isUuid && courses.length > 0 && !courses.some((c) => c.id === courseId)) {
-      setCourseId(courses[0].id)
-    }
-  }, [courses, courseId])
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ collapsed, course: courseId }))
   }, [collapsed, courseId])
