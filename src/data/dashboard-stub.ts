@@ -11,7 +11,7 @@ import type { CurrentUser, DashboardData } from "@/types/dashboard"
 /** Identidad de muestra; en la app real viene del JWT decodificado (Auth). */
 export const currentUserStub: CurrentUser = {
   name: "María Rojas",
-  role: "Profesora jefe",
+  email: "m.rojas@colegio.cl",
 }
 
 export const dashboardStub: DashboardData = {

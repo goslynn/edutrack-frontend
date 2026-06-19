@@ -31,6 +31,9 @@ interface CalificacionesScreenProps {
   flash: Flash
   /** Navegación inyectada: abrir el libro de notas de una evaluación. */
   onOpenLibro: (evaluationId: string) => void
+  onCreateEvalApi?: (data: { name: string; evaluationDate: string; weight: number }) => Promise<Evaluation | null>
+  onUpdateEvalApi?: (id: string, data: { name: string; evaluationDate: string; weight: number }) => Promise<Evaluation | null>
+  onDeleteEvalApi?: (id: string) => Promise<boolean>
 }
 
 /**
@@ -53,6 +56,9 @@ export function CalificacionesScreen({
   onEvalChange,
   flash,
   onOpenLibro,
+  onCreateEvalApi,
+  onUpdateEvalApi,
+  onDeleteEvalApi,
 }: CalificacionesScreenProps) {
   const [tab, setTab] = useState("evaluaciones")
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0]
@@ -134,6 +140,9 @@ export function CalificacionesScreen({
           flash={flash}
           onEvalChange={onEvalChange}
           onOpenLibro={onOpenLibro}
+          onCreateEvalApi={onCreateEvalApi}
+          onUpdateEvalApi={onUpdateEvalApi}
+          onDeleteEvalApi={onDeleteEvalApi}
         />
       ) : (
         <PromediosPanel

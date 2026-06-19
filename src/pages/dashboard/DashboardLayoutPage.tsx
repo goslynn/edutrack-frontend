@@ -33,7 +33,7 @@ export function DashboardLayoutPage() {
 
   const currentUser = {
     name: user?.displayName ?? "…",
-    role: user?.email ?? "",
+    email: user?.email ?? "",
   }
 
   return (

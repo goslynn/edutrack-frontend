@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
-import { LogOutIcon } from "lucide-react"
 
 import type {
   Course,
@@ -8,7 +7,6 @@ import type {
   DashboardNotification,
 } from "@/types/dashboard"
 import { clearSession } from "@/lib/session"
-import { Avatar } from "@/components/ui/avatar"
 import { Sidebar } from "@/components/ui/sidebar"
 import { DashboardTopbar } from "./dashboard-topbar"
 import { NAV_GROUPS, NAV_LABEL, NAV_PATH, idFromPath } from "./nav-config"
@@ -85,6 +83,8 @@ export function DashboardLayout({
     navigate("/login")
   }
 
+  const handleSettings = () => navigate("/dashboard/configuracion")
+
   const context: DashboardOutletContext = { courseId, courseName }
 
   return (
@@ -104,27 +104,6 @@ export function DashboardLayout({
           </>
         }
         brandCollapsed={<img src={mark} width={28} height={28} alt="EduTrack" />}
-        footer={
-          <button
-            type="button"
-            onClick={handleLogout}
-            title="Cerrar sesión"
-            className="flex w-full items-center gap-2.5 rounded-md p-2 text-left transition-colors outline-none hover:bg-surface focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <Avatar name={user.name} size="md" />
-            {!collapsed && (
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-[13px] leading-tight font-semibold">
-                  {user.name}
-                </span>
-                <span className="text-[11.5px] text-muted">{user.role}</span>
-              </span>
-            )}
-            {!collapsed && (
-              <LogOutIcon className="size-[15px] flex-none text-muted" aria-hidden />
-            )}
-          </button>
-        }
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -133,7 +112,10 @@ export function DashboardLayout({
           courseId={courseId}
           onCourseChange={setCourseId}
           notifications={notifications}
-          userName={user.name}
+          userDisplayName={user.name}
+          userEmail={user.email}
+          onLogout={handleLogout}
+          onSettings={handleSettings}
         />
         <main
           className="flex-1 overflow-auto bg-surface"

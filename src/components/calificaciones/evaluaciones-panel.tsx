@@ -40,6 +40,9 @@ interface EvaluacionesPanelProps {
   onEvalChange: (updater: (prev: Evaluation[]) => Evaluation[]) => void
   /** Navegación inyectada: abrir el libro de notas de una evaluación. */
   onOpenLibro: (evaluationId: string) => void
+  onCreateEvalApi?: (data: { name: string; evaluationDate: string; weight: number }) => Promise<Evaluation | null>
+  onUpdateEvalApi?: (id: string, data: { name: string; evaluationDate: string; weight: number }) => Promise<Evaluation | null>
+  onDeleteEvalApi?: (id: string) => Promise<boolean>
 }
 
 type Dialog = { mode: "create" | "edit"; initial?: Evaluation }
@@ -61,10 +64,14 @@ export function EvaluacionesPanel({
   flash,
   onEvalChange,
   onOpenLibro,
+  onCreateEvalApi,
+  onUpdateEvalApi,
+  onDeleteEvalApi,
 }: EvaluacionesPanelProps) {
   const [q, setQ] = useState("")
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [del, setDel] = useState<Evaluation | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const list = evaluations
     .filter((e) => e.subjectId === subject.id && e.period === period)
@@ -86,28 +93,64 @@ export function EvaluacionesPanel({
   }
 
   const onSubmit = (data: EvaluationForm) => {
-    if (dialog?.mode === "edit" && dialog.initial) {
-      const id = dialog.initial.id
-      onEvalChange((es) => es.map((e) => (e.id === id ? { ...e, ...data, updatedAt: nowISO() } : e)))
-      flash("success", "Evaluación actualizada.")
-    } else {
-      const ne: Evaluation = {
-        id: "e" + Date.now(),
-        subjectId: subject.id,
-        period,
-        ...data,
-        createdAt: nowISO(),
-        updatedAt: nowISO(),
+    void (async () => {
+      setSaving(true)
+      if (dialog?.mode === "edit" && dialog.initial) {
+        const id = dialog.initial.id
+        if (onUpdateEvalApi) {
+          const result = await onUpdateEvalApi(id, data)
+          if (result) {
+            onEvalChange((es) => es.map((e) => (e.id === id ? result : e)))
+            flash("success", "Evaluación actualizada.")
+            setDialog(null)
+          }
+        } else {
+          onEvalChange((es) => es.map((e) => (e.id === id ? { ...e, ...data, updatedAt: nowISO() } : e)))
+          flash("success", "Evaluación actualizada.")
+          setDialog(null)
+        }
+      } else {
+        if (onCreateEvalApi) {
+          const result = await onCreateEvalApi(data)
+          if (result) {
+            onEvalChange((es) => [...es, result])
+            flash("success", `«${data.name}» fue creada.`)
+            setDialog(null)
+          }
+        } else {
+          const ne: Evaluation = {
+            id: "e" + Date.now(),
+            subjectId: subject.id,
+            period,
+            ...data,
+            createdAt: nowISO(),
+            updatedAt: nowISO(),
+          }
+          onEvalChange((es) => [...es, ne])
+          flash("success", `«${data.name}» fue creada.`)
+          setDialog(null)
+        }
       }
-      onEvalChange((es) => [...es, ne])
-      flash("success", `«${data.name}» fue creada.`)
-    }
-    setDialog(null)
+      setSaving(false)
+    })()
   }
   const onDelete = () => {
     if (!del) return
-    onEvalChange((es) => es.filter((e) => e.id !== del.id))
-    flash("success", `«${del.name}» fue eliminada.`)
+    const target = del
+    void (async () => {
+      setSaving(true)
+      if (onDeleteEvalApi) {
+        const ok = await onDeleteEvalApi(target.id)
+        if (ok) {
+          onEvalChange((es) => es.filter((e) => e.id !== target.id))
+          flash("success", `«${target.name}» fue eliminada.`)
+        }
+      } else {
+        onEvalChange((es) => es.filter((e) => e.id !== target.id))
+        flash("success", `«${target.name}» fue eliminada.`)
+      }
+      setSaving(false)
+    })()
     setDel(null)
   }
 
@@ -270,6 +313,7 @@ export function EvaluacionesPanel({
           weightUsed={weightUsed}
           onClose={() => setDialog(null)}
           onSubmit={onSubmit}
+          saving={saving}
         />
       )}
       {del && (

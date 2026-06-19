@@ -106,5 +106,5 @@ export interface DashboardData {
 
 export interface CurrentUser {
   name: string
-  role: string
+  email: string
 }

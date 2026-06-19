@@ -40,6 +40,8 @@ interface LibroNotasProps {
   onBack: () => void
   onRegister: (evaluationId: string, studentId: string, score: number) => void
   onCorrect: (gradeId: string, score: number) => void
+  /** Carga lazy del historial de auditoría para una nota. */
+  onLoadAudit?: (gradeId: string) => void
 }
 
 type Dialog = { mode: "register" | "correct"; student: RosterStudent; current?: number }
@@ -66,6 +68,7 @@ export function LibroNotas({
   onBack,
   onRegister,
   onCorrect,
+  onLoadAudit,
 }: LibroNotasProps) {
   const [q, setQ] = useState("")
   const [filter, setFilter] = useState("all")
@@ -177,7 +180,10 @@ export function LibroNotas({
                   icon: HistoryIcon,
                   label: "Ver historial",
                   state: perms["audit.read"],
-                  onClick: () => setHistory({ student: s }),
+                  onClick: () => {
+                    setHistory({ student: s })
+                    if (g && onLoadAudit) onLoadAudit(g.id)
+                  },
                 },
               ]
               return (

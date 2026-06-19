@@ -24,6 +24,7 @@ interface EvaluacionDialogProps {
   weightUsed: number
   onClose: () => void
   onSubmit: (data: EvaluationForm) => void
+  saving?: boolean
 }
 
 const req = <span className="text-danger">*</span>
@@ -41,6 +42,7 @@ export function EvaluacionDialog({
   weightUsed,
   onClose,
   onSubmit,
+  saving,
 }: EvaluacionDialogProps) {
   const [name, setName] = useState(initial?.name ?? "")
   const [evaluationDate, setDate] = useState(initial?.evaluationDate ?? "")
@@ -157,8 +159,8 @@ export function EvaluacionDialog({
         >
           Cancelar
         </button>
-        <Button onClick={submit}>
-          <CheckIcon /> {mode === "edit" ? "Guardar cambios" : "Crear evaluación"}
+        <Button onClick={submit} disabled={saving}>
+          <CheckIcon /> {saving ? "Guardando…" : mode === "edit" ? "Guardar cambios" : "Crear evaluación"}
         </Button>
       </div>
     </ModalShell>
