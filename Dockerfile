@@ -17,6 +17,13 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 # script `build` de package.json: typecheck + bundle.
 RUN node_modules/.bin/tsc -b && node_modules/.bin/vite build
 
+# ── test: vitest + coverage. Reusa deps/source del stage build (devDeps incluidas). ──
+# Uso: docker build --target test -t edutrack-front:test . && docker run --rm edutrack-front:test
+# Iteración rápida montando el código: docker run --rm -v "$PWD:/app" -v /app/node_modules edutrack-front:test
+FROM build AS test
+ENV CI=true
+CMD ["node_modules/.bin/vitest", "run", "--coverage"]
+
 # ── runtime: solo node + un static server + dist/ (sin source, sin devDeps) ──────
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
