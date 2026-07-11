@@ -78,8 +78,7 @@ export function DownloadDialog({ file, onRequestLink, onClose }: DownloadDialogP
               <span className="grid size-[18px] flex-none place-items-center rounded-full bg-success text-[11px] font-bold text-success-foreground">
                 1
               </span>
-              Enlace pre-firmado generado{" "}
-              <span className="font-mono text-foreground">GET /content/files/{file.id}/link</span>
+              Enlace de descarga generado
             </div>
             <div className="flex items-center gap-2 rounded-md border border-border bg-surface py-1 pr-1 pl-3">
               <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">{link.url}</span>

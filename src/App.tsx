@@ -7,6 +7,7 @@ import { AsistenciaPage } from '@/pages/dashboard/AsistenciaPage'
 import { AnotacionesPage } from '@/pages/dashboard/AnotacionesPage'
 import { EstudiantesPage } from '@/pages/dashboard/EstudiantesPage'
 import { ContenidosPage } from '@/pages/dashboard/ContenidosPage'
+import { ReportesPage } from '@/pages/dashboard/ReportesPage'
 import { CalificacionesPage } from '@/pages/dashboard/calificaciones/CalificacionesPage'
 import { CalificacionesIndexPage } from '@/pages/dashboard/calificaciones/CalificacionesIndexPage'
 import { LibroNotasPage } from '@/pages/dashboard/calificaciones/LibroNotasPage'
@@ -49,7 +50,7 @@ function App() {
           <Route path="anotaciones" element={<AnotacionesPage />} />
           <Route path="contenidos" element={<ContenidosPage />} />
           <Route path="estudiantes" element={<EstudiantesPage />} />
-          <Route path="reportes" element={<PlaceholderPage />} />
+          <Route path="reportes" element={<ReportesPage />} />
           <Route path="notificaciones" element={<PlaceholderPage />} />
           <Route path="configuracion" element={<ConfiguracionPage />}>
             {/* Índice = documento de secciones; cada panel en su propia ruta. */}

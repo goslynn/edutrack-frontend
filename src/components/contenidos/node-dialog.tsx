@@ -74,7 +74,7 @@ export function NodeDialog({
           </div>
           <div className="mt-[3px] text-[13px] leading-normal text-muted">
             {mode === "edit" ? (
-              <>Editas atributos de este {lower}. Moverlo de lugar no existe como endpoint en v1.</>
+              <>Editas los datos de este {lower}. Cambiarlo de lugar no está disponible por ahora.</>
             ) : parent ? (
               <>
                 Se creará dentro de <b>{parent.name}</b> como <b>{level.name}</b> (nivel {level.depth}).
@@ -127,10 +127,7 @@ export function NodeDialog({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-border px-[22px] pt-3.5 pb-[18px]">
-        <span className="font-mono text-[11.5px] text-muted">
-          {mode === "edit" ? `PUT /content/nodes/${node?.id}` : "POST /content/nodes"}
-        </span>
+      <div className="flex items-center justify-end gap-3 border-t border-border px-[22px] pt-3.5 pb-[18px]">
         <div className="flex items-center gap-3">
           {error && <span className="text-[12.5px] text-danger">{error}</span>}
           <Button variant="ghost" onClick={onClose}>
